@@ -1,4 +1,6 @@
---.sparky9971 working for update soon public and its public bu errors fixing
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V18 (NOTIFY SYSTEM + CONFIG FIX + TITLE FIX)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -15,6 +17,7 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 
 local TargetParent
 local success = pcall(function() TargetParent = gethui and gethui() or game:GetService("CoreGui") end)
@@ -26,6 +29,81 @@ local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 
 for _, v in pairs(TargetParent:GetChildren()) do
     if v.Name == "BymaxUILib" then v:Destroy() end
+end
+
+-- ==============================================================================
+-- NOTIFICATION SYSTEM
+-- ==============================================================================
+local NotifGui = Instance.new("ScreenGui")
+NotifGui.Name = "BymaxNotif"
+NotifGui.Parent = TargetParent
+NotifGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+local NotifLayout = Instance.new("Frame")
+NotifLayout.Size = UDim2.new(0, 250, 1, -20)
+NotifLayout.Position = UDim2.new(1, -260, 0, 10)
+NotifLayout.BackgroundTransparency = 1
+NotifLayout.Parent = NotifGui
+
+local UIListLayoutNotif = Instance.new("UIListLayout")
+UIListLayoutNotif.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayoutNotif.VerticalAlignment = Enum.VerticalAlignment.Bottom
+UIListLayoutNotif.Padding = UDim.new(0, 10)
+UIListLayoutNotif.Parent = NotifLayout
+
+function Library:Notify(title, text, duration)
+    duration = duration or 3
+
+    local NContainer = Instance.new("Frame")
+    NContainer.Size = UDim2.new(1, 0, 0, 60)
+    NContainer.BackgroundColor3 = Library.Theme.DarkBG
+    NContainer.BorderSizePixel = 0
+    NContainer.Position = UDim2.new(1, 300, 0, 0) -- Start off-screen
+    NContainer.Parent = NotifLayout
+    Instance.new("UIStroke", NContainer).Color = Library.Theme.Border
+
+    local NTopLine = Instance.new("Frame")
+    NTopLine.Size = UDim2.new(1, 0, 0, 2)
+    NTopLine.BackgroundColor3 = Library.Theme.Accent
+    NTopLine.BorderSizePixel = 0
+    NTopLine.Parent = NContainer
+
+    local NTitle = Instance.new("TextLabel")
+    NTitle.Size = UDim2.new(1, -10, 0, 20)
+    NTitle.Position = UDim2.new(0, 10, 0, 5)
+    NTitle.BackgroundTransparency = 1
+    NTitle.Text = title
+    NTitle.TextColor3 = Library.Theme.Accent
+    NTitle.Font = Enum.Font.Code
+    NTitle.TextSize = 13
+    NTitle.TextXAlignment = Enum.TextXAlignment.Left
+    NTitle.Parent = NContainer
+
+    local NText = Instance.new("TextLabel")
+    NText.Size = UDim2.new(1, -10, 0, 30)
+    NText.Position = UDim2.new(0, 10, 0, 25)
+    NText.BackgroundTransparency = 1
+    NText.Text = text
+    NText.TextColor3 = Library.Theme.Text
+    NText.Font = Enum.Font.Code
+    NText.TextSize = 12
+    NText.TextXAlignment = Enum.TextXAlignment.Left
+    NText.TextYAlignment = Enum.TextYAlignment.Top
+    NText.TextWrapped = true
+    NText.Parent = NContainer
+
+    -- Tween In
+    local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
+    TweenIn:Play()
+
+    -- Tween Out and Destroy
+    task.spawn(function()
+        task.wait(duration)
+        local TweenOut = TweenService:Create(NContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 300, 0, 0)})
+        TweenOut:Play()
+        TweenOut.Completed:Wait()
+        NContainer:Destroy()
+    end)
 end
 
 -- ==============================================================================
@@ -42,7 +120,10 @@ function Library:CreateWindow(title, wmText)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
     ScreenGui.ResetOnSpawn = false
 
-    function WindowData:Unload() ScreenGui:Destroy() end
+    function WindowData:Unload() 
+        ScreenGui:Destroy() 
+        if NotifGui then NotifGui:Destroy() end
+    end
 
     local MobileToggleBtn = nil
     if isMobile then
@@ -315,18 +396,17 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.ZIndex = 1 
             GBBlueLine.Parent = GroupBox
             
+            -- ========================================================
+            -- TITLE FIX (Removed UISizeConstraint causing invisibility)
+            -- ========================================================
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 10, 0, -2) 
-            TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
+            TitleContainer.Position = UDim2.new(0, 10, 0, -8) 
+            TitleContainer.Size = UDim2.new(0, 0, 0, 16) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
             TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
             TitleContainer.BorderSizePixel = 0
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
-
-            local TitleConstraint = Instance.new("UISizeConstraint")
-            TitleConstraint.MaxSize = Vector2.new(220, 14) 
-            TitleConstraint.Parent = TitleContainer
 
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
@@ -336,7 +416,6 @@ function Library:CreateWindow(title, wmText)
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
-            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -609,13 +688,11 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
-                
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
                     end
                 end)
-                
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = false
@@ -1050,18 +1127,15 @@ function Library:CreateWindow(title, wmText)
 end
 
 -- ==============================================================================
--- UI SETTINGS & NO-FAIL CONFIG MANAGER
+-- UI SETTINGS & ROBUST CONFIG MANAGER
 -- ==============================================================================
 Library.UISettings = {}
 Library.UISettings.Folder = "BymaxUI_Configs"
 Library.UISettings.AutoFile = "BymaxUI_Configs/Autoload.txt"
 
--- Pcall ile koruma, hata verse bile UI cizilmesini durdurmayacak
 function Library.UISettings:Init()
     pcall(function()
-        if isfolder and makefolder then
-            if not isfolder(self.Folder) then makefolder(self.Folder) end
-        end
+        if not isfolder(self.Folder) then makefolder(self.Folder) end
     end)
 end
 
@@ -1086,17 +1160,19 @@ function Library.UISettings:Save(configName)
         if typeof(val) == "Color3" then val = {R = val.R, G = val.G, B = val.B, IsColor3 = true} end
         data[flag] = val
     end
-    pcall(function()
+    local s = pcall(function()
         local encoded = HttpService:JSONEncode(data)
         writefile(self.Folder .. "/" .. configName .. ".json", encoded)
     end)
+    if s then Library:Notify("Config", "Successfully saved: " .. configName)
+    else Library:Notify("Error", "Failed to save config!", 5) end
 end
 
 function Library.UISettings:Load(configName)
     if not configName or configName == "" then return end
     self:Init()
     local path = self.Folder .. "/" .. configName .. ".json"
-    pcall(function()
+    local s = pcall(function()
         local content = readfile(path)
         local decoded = HttpService:JSONDecode(content)
         if type(decoded) == "table" then
@@ -1110,17 +1186,21 @@ function Library.UISettings:Load(configName)
             end
         end
     end)
+    if s then Library:Notify("Config", "Successfully loaded: " .. configName)
+    else Library:Notify("Error", "Failed to load config!", 5) end
 end
 
 function Library.UISettings:Delete(configName)
     if not configName or configName == "" then return end
     self:Init()
-    pcall(function() delfile(self.Folder .. "/" .. configName .. ".json") end)
+    local s = pcall(function() delfile(self.Folder .. "/" .. configName .. ".json") end)
+    if s then Library:Notify("Config", "Deleted config: " .. configName) end
 end
 
 function Library.UISettings:SetAutoload(configName)
     self:Init()
-    pcall(function() writefile(self.AutoFile, configName) end)
+    local s = pcall(function() writefile(self.AutoFile, configName) end)
+    if s then Library:Notify("Autoload", "Set " .. configName .. " as default.") end
 end
 
 function Library.UISettings:DoAutoload()
@@ -1131,11 +1211,7 @@ function Library.UISettings:DoAutoload()
     end)
 end
 
--- ==============================================================================
--- BUILD SETTINGS SECTION (INCLUDES MENU BIND + UNLOAD)
--- ==============================================================================
 function Library.UISettings:BuildSettingsSection(windowData, targetTab)
-    -- Hata çıksa da menüyü çizecek
     self:Init() 
     
     local MenuSettings = targetTab:CreateGroupbox("Menu Interface", "Left")
@@ -1144,7 +1220,10 @@ function Library.UISettings:BuildSettingsSection(windowData, targetTab)
         Name = "Menu Toggle Bind",
         Default = "RightShift",
         Callback = function(bindName)
-            if bindName then windowData.MenuBind = Enum.KeyCode[bindName] end
+            if bindName then 
+                windowData.MenuBind = Enum.KeyCode[bindName] 
+                Library:Notify("Menu", "Toggle bind set to: " .. bindName)
+            end
         end
     })
 
@@ -1208,7 +1287,10 @@ function Library.UISettings:BuildSettingsSection(windowData, targetTab)
 
     ConfigGroup:CreateButton({
         Name = "Refresh List",
-        Callback = function() configDropdown:Refresh(self:GetConfigs()) end
+        Callback = function() 
+            configDropdown:Refresh(self:GetConfigs()) 
+            Library:Notify("Config", "List Refreshed!")
+        end
     })
 end
 
