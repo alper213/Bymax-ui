@@ -1,4 +1,4 @@
---.sparky9971
+--.sparky9971 working for update soon public and its public bu errors fixing
 local Library = {
     Flags = {}, 
     Theme = {
@@ -387,8 +387,7 @@ function Library:CreateWindow(title, wmText)
                 Btn.MouseEnter:Connect(function() Btn.TextColor3 = Library.Theme.Accent end)
                 Btn.MouseLeave:Connect(function() Btn.TextColor3 = Library.Theme.Text end)
                 Btn.Activated:Connect(function() 
-                    local success, err = pcall(callback)
-                    if not success then warn("[Bymax UI Error] Button failed:", err) end
+                    pcall(callback)
                 end)
             end
 
@@ -1051,34 +1050,34 @@ function Library:CreateWindow(title, wmText)
 end
 
 -- ==============================================================================
--- CONFIG SYSTEM SAFE INJECTION
+-- UI SETTINGS & NO-FAIL CONFIG MANAGER
 -- ==============================================================================
-Library.ConfigManager = {}
-Library.ConfigManager.Folder = "BymaxUI_Configs"
-Library.ConfigManager.AutoFile = "BymaxUI_Configs/Autoload.txt"
+Library.UISettings = {}
+Library.UISettings.Folder = "BymaxUI_Configs"
+Library.UISettings.AutoFile = "BymaxUI_Configs/Autoload.txt"
 
-function Library.ConfigManager:Init()
+-- Pcall ile koruma, hata verse bile UI cizilmesini durdurmayacak
+function Library.UISettings:Init()
     pcall(function()
-        if not isfolder(self.Folder) then
-            makefolder(self.Folder)
+        if isfolder and makefolder then
+            if not isfolder(self.Folder) then makefolder(self.Folder) end
         end
     end)
 end
 
-function Library.ConfigManager:GetConfigs()
+function Library.UISettings:GetConfigs()
     local list = {}
     self:Init()
-    local s, files = pcall(function() return listfiles(self.Folder) end)
-    if s and files then
-        for _, file in ipairs(files) do
+    pcall(function()
+        for _, file in ipairs(listfiles(self.Folder)) do
             local fileName = file:match("([^/\\]+)%.json$")
             if fileName then table.insert(list, fileName) end
         end
-    end
+    end)
     return list
 end
 
-function Library.ConfigManager:Save(configName)
+function Library.UISettings:Save(configName)
     if not configName or configName == "" then return end
     self:Init()
     local data = {}
@@ -1087,56 +1086,73 @@ function Library.ConfigManager:Save(configName)
         if typeof(val) == "Color3" then val = {R = val.R, G = val.G, B = val.B, IsColor3 = true} end
         data[flag] = val
     end
-    local s1, encoded = pcall(function() return HttpService:JSONEncode(data) end)
-    if s1 then
-        pcall(function() writefile(self.Folder .. "/" .. configName .. ".json", encoded) end)
-    end
+    pcall(function()
+        local encoded = HttpService:JSONEncode(data)
+        writefile(self.Folder .. "/" .. configName .. ".json", encoded)
+    end)
 end
 
-function Library.ConfigManager:Load(configName)
+function Library.UISettings:Load(configName)
     if not configName or configName == "" then return end
     self:Init()
     local path = self.Folder .. "/" .. configName .. ".json"
-    
-    local s1, fileContent = pcall(function() return readfile(path) end)
-    if s1 and fileContent then
-        local s2, decoded = pcall(function() return HttpService:JSONDecode(fileContent) end)
-        if s2 and type(decoded) == "table" then
+    pcall(function()
+        local content = readfile(path)
+        local decoded = HttpService:JSONDecode(content)
+        if type(decoded) == "table" then
             for flag, savedValue in pairs(decoded) do
                 if Library.Flags[flag] and Library.Flags[flag].Set then
                     if type(savedValue) == "table" and savedValue.IsColor3 then
                         savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
                     end
-                    pcall(function() Library.Flags[flag]:Set(savedValue) end)
+                    Library.Flags[flag]:Set(savedValue)
                 end
             end
         end
-    end
+    end)
 end
 
-function Library.ConfigManager:Delete(configName)
+function Library.UISettings:Delete(configName)
     if not configName or configName == "" then return end
     self:Init()
-    local path = self.Folder .. "/" .. configName .. ".json"
-    pcall(function() delfile(path) end)
+    pcall(function() delfile(self.Folder .. "/" .. configName .. ".json") end)
 end
 
-function Library.ConfigManager:SetAutoload(configName)
+function Library.UISettings:SetAutoload(configName)
     self:Init()
     pcall(function() writefile(self.AutoFile, configName) end)
 end
 
-function Library.ConfigManager:DoAutoload()
+function Library.UISettings:DoAutoload()
     self:Init()
-    local s, content = pcall(function() return readfile(self.AutoFile) end)
-    if s and content and content ~= "" then
-        self:Load(content)
-    end
+    pcall(function()
+        local content = readfile(self.AutoFile)
+        if content and content ~= "" then self:Load(content) end
+    end)
 end
 
-function Library.ConfigManager:BuildConfigSection(targetTab)
+-- ==============================================================================
+-- BUILD SETTINGS SECTION (INCLUDES MENU BIND + UNLOAD)
+-- ==============================================================================
+function Library.UISettings:BuildSettingsSection(windowData, targetTab)
+    -- Hata çıksa da menüyü çizecek
     self:Init() 
     
+    local MenuSettings = targetTab:CreateGroupbox("Menu Interface", "Left")
+    
+    MenuSettings:CreateKeybind({
+        Name = "Menu Toggle Bind",
+        Default = "RightShift",
+        Callback = function(bindName)
+            if bindName then windowData.MenuBind = Enum.KeyCode[bindName] end
+        end
+    })
+
+    MenuSettings:CreateButton({
+        Name = "Unload UI",
+        Callback = function() windowData:Unload() end
+    })
+
     local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
     local configNameBox = ""
     local selectedConfig = ""
