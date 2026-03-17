@@ -1,6 +1,8 @@
-
+-- ==============================================================================
+-- BYMAX UI LIBRARY - PURE EDITION (NO CONFIG, NO CRASHES, JUST RAW UI)
+-- ==============================================================================
 local Library = {
-    Flags = {}, 
+    Flags = {}, -- Stores current session values only (no saving)
     Theme = {
         MainBG = Color3.fromRGB(25, 25, 25),
         Border = Color3.fromRGB(45, 45, 45),
@@ -29,7 +31,7 @@ for _, v in pairs(TargetParent:GetChildren()) do
 end
 
 -- ==============================================================================
--- SMOOTH NOTIFICATION SYSTEM (WRAPPER FIX FOR UILISTLAYOUT)
+-- SMOOTH NOTIFICATION SYSTEM 
 -- ==============================================================================
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "BymaxNotif"
@@ -432,6 +434,7 @@ function Library:CreateWindow(title, wmText)
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
+            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -523,14 +526,7 @@ function Library:CreateWindow(title, wmText)
                 Instance.new("UIPadding", InputBox).PaddingLeft = UDim.new(0, 4)
 
                 if flag then
-                    Library.Flags[flag] = {
-                        Value = "",
-                        Set = function(self, val)
-                            InputBox.Text = tostring(val)
-                            self.Value = val
-                            pcall(callback, val)
-                        end
-                    }
+                    Library.Flags[flag] = { Value = "" }
                 end
 
                 InputBox.FocusLost:Connect(function()
@@ -577,16 +573,7 @@ function Library:CreateWindow(title, wmText)
                 Lbl.Parent = MainBtn
 
                 if flag then
-                    Library.Flags[flag] = {
-                        Value = state,
-                        Set = function(self, val)
-                            state = val
-                            self.Value = val
-                            CheckBox.BackgroundColor3 = val and Library.Theme.Accent or Library.Theme.ItemBG
-                            if bind then UpdateKeybindList(name, bind, val) end
-                            pcall(callback, val)
-                        end
-                    }
+                    Library.Flags[flag] = { Value = state }
                 end
 
                 local function Fire()
@@ -688,17 +675,7 @@ function Library:CreateWindow(title, wmText)
                 ValLabel.Parent = BG
 
                 if flag then
-                    Library.Flags[flag] = {
-                        Value = current,
-                        Set = function(self, val)
-                            val = math.clamp(val, min, max)
-                            self.Value = val
-                            Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
-                            local formatString = (increment % 1 == 0) and "%d/%d" or "%.1f/%.1f"
-                            ValLabel.Text = string.format(formatString, val, max)
-                            pcall(callback, val)
-                        end
-                    }
+                    Library.Flags[flag] = { Value = current }
                 end
 
                 if current ~= min then pcall(callback, current) end
@@ -801,14 +778,7 @@ function Library:CreateWindow(title, wmText)
                 DropLayout.Parent = DropFrame
 
                 if flag then
-                    Library.Flags[flag] = {
-                        Value = list[1] or "",
-                        Set = function(self, val)
-                            MainBtn.Text = " " .. tostring(val)
-                            self.Value = val
-                            pcall(callback, val)
-                        end
-                    }
+                    Library.Flags[flag] = { Value = list[1] or "" }
                 end
 
                 function DropData:Refresh(newList)
@@ -851,12 +821,6 @@ function Library:CreateWindow(title, wmText)
                             pcall(callback, optionText)
                         end)
                     end
-                end
-
-                function DropData:Set(newValue)
-                    if flag then Library.Flags[flag].Value = newValue end
-                    MainBtn.Text = " " .. tostring(newValue)
-                    pcall(callback, newValue)
                 end
 
                 DropData:Refresh(list)
@@ -1007,14 +971,7 @@ function Library:CreateWindow(title, wmText)
                 end
 
                 if flag then
-                    Library.Flags[flag] = {
-                        Value = defaultColor,
-                        Set = function(self, val)
-                            local h, s, v = Color3.toHSV(val)
-                            currentHSV = {h, s, v}
-                            SetColor()
-                        end
-                    }
+                    Library.Flags[flag] = { Value = defaultColor }
                 end
 
                 SetColor()
