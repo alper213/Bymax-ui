@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX SAVE MANAGER - V6 (.TXT EXTENSION BYPASS & ERROR ISOLATION)
+-- NO WORK İ TEST İT CAN TAKE İT BUT NON WORK CFG
 -- ==============================================================================
 local HttpService = game:GetService("HttpService")
 
