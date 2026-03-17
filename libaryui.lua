@@ -1,8 +1,8 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V12 PUBLIC RELEASE (WITH CONFIG MANAGER & TRUNCATE FIX)
+-- BYMAX UI LIBRARY - V12.1 (MAKEFOLDER FIX & WATERMARK LINE FIX)
 -- ==============================================================================
 local Library = {
-    Flags = {}, -- Stores all element values
+    Flags = {}, 
     Theme = {
         MainBG = Color3.fromRGB(25, 25, 25),
         Border = Color3.fromRGB(45, 45, 45),
@@ -32,7 +32,7 @@ for _, v in pairs(TargetParent:GetChildren()) do
 end
 
 -- ==============================================================================
--- CONFIG MANAGER (200+ LINES ROBUST SYSTEM)
+-- CONFIG MANAGER (CRASH FIX)
 -- ==============================================================================
 Library.ConfigManager = {
     Folder = "BymaxUI_Configs",
@@ -44,29 +44,39 @@ function Library.ConfigManager:Init()
         warn("[Bymax UI] Your executor does not support File System. Configs disabled.")
         return false
     end
-    if not isfolder(self.Folder) then makefolder(self.Folder) end
+    
+    -- PCALL ADDED: Prevents "Failed to create directory" error from crashing the UI
+    if not isfolder(self.Folder) then 
+        local s, err = pcall(function() makefolder(self.Folder) end)
+        if not s then
+            warn("[Bymax UI] Failed to create config folder. Configs will not save. Error: " .. tostring(err))
+            return false
+        end
+    end
     return true
 end
 
 function Library.ConfigManager:GetConfigs()
     local list = {}
-    if isfolder(self.Folder) then
-        for _, file in ipairs(listfiles(self.Folder)) do
-            local fileName = file:match("([^/\\]+)%.json$")
-            if fileName then table.insert(list, fileName) end
+    if self:Init() and isfolder(self.Folder) then
+        local s, files = pcall(listfiles, self.Folder)
+        if s and files then
+            for _, file in ipairs(files) do
+                local fileName = file:match("([^/\\]+)%.json$")
+                if fileName then table.insert(list, fileName) end
+            end
         end
     end
     return list
 end
 
 function Library.ConfigManager:Save(configName)
-    if not configName or configName == "" then return end
+    if not configName or configName == "" or not self:Init() then return end
     local data = {}
     
     for flag, element in pairs(Library.Flags) do
         if not self.Ignore[flag] then
             local val = element.Value
-            -- Convert Color3 to a serializable table
             if typeof(val) == "Color3" then
                 val = {R = val.R, G = val.G, B = val.B, IsColor3 = true}
             end
@@ -76,23 +86,30 @@ function Library.ConfigManager:Save(configName)
     
     local success, encoded = pcall(function() return HttpService:JSONEncode(data) end)
     if success then
-        writefile(self.Folder .. "/" .. configName .. ".json", encoded)
-        print("[Bymax UI] Saved Config:", configName)
+        local s, err = pcall(function() writefile(self.Folder .. "/" .. configName .. ".json", encoded) end)
+        if s then
+            print("[Bymax UI] Saved Config:", configName)
+        else
+            warn("[Bymax UI] Writefile failed:", err)
+        end
     else
         warn("[Bymax UI] Failed to encode config!")
     end
 end
 
 function Library.ConfigManager:Load(configName)
-    if not configName or configName == "" then return end
+    if not configName or configName == "" or not self:Init() then return end
     local path = self.Folder .. "/" .. configName .. ".json"
     
     if isfile(path) then
-        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+        local fileContent
+        local s, err = pcall(function() fileContent = readfile(path) end)
+        if not s then return warn("[Bymax UI] Readfile failed:", err) end
+
+        local success, decoded = pcall(function() return HttpService:JSONDecode(fileContent) end)
         if success and type(decoded) == "table" then
             for flag, savedValue in pairs(decoded) do
                 if Library.Flags[flag] and Library.Flags[flag].Set then
-                    -- Reconstruct Color3 if necessary
                     if type(savedValue) == "table" and savedValue.IsColor3 then
                         savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
                     end
@@ -107,15 +124,14 @@ function Library.ConfigManager:Load(configName)
 end
 
 function Library.ConfigManager:Delete(configName)
-    if not configName or configName == "" then return end
+    if not configName or configName == "" or not self:Init() then return end
     local path = self.Folder .. "/" .. configName .. ".json"
     if isfile(path) then
-        delfile(path)
+        pcall(delfile, path)
         print("[Bymax UI] Deleted Config:", configName)
     end
 end
 
--- Auto-build the Config UI for the user
 function Library.ConfigManager:BuildConfigSection(targetTab)
     self:Init()
     local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
@@ -170,8 +186,10 @@ function Library.ConfigManager:BuildConfigSection(targetTab)
         Callback = function() configDropdown:Refresh(self:GetConfigs()) end
     })
 end
--- ==============================================================================
 
+-- ==============================================================================
+-- MAIN LIBRARY
+-- ==============================================================================
 function Library:CreateWindow(title, wmText)
     local WindowData = {}
     WindowData.MenuBind = Enum.KeyCode.RightShift
@@ -207,7 +225,9 @@ function Library:CreateWindow(title, wmText)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
     end
 
-    -- Watermark
+    -- ========================================================
+    -- WATERMARK FIX (Line goes all the way now)
+    -- ========================================================
     local WatermarkBG = Instance.new("Frame")
     WatermarkBG.AutomaticSize = Enum.AutomaticSize.X
     WatermarkBG.Size = UDim2.new(0, 0, 0, 20)
@@ -225,11 +245,6 @@ function Library:CreateWindow(title, wmText)
     WMTopLine.BorderSizePixel = 0
     WMTopLine.Parent = WatermarkBG
 
-    local WMPadding = Instance.new("UIPadding")
-    WMPadding.PaddingLeft = UDim.new(0, 6)
-    WMPadding.PaddingRight = UDim.new(0, 6)
-    WMPadding.Parent = WatermarkBG
-
     local WMTextLabel = Instance.new("TextLabel")
     WMTextLabel.AutomaticSize = Enum.AutomaticSize.X
     WMTextLabel.Size = UDim2.new(0, 0, 1, 0)
@@ -239,6 +254,12 @@ function Library:CreateWindow(title, wmText)
     WMTextLabel.Font = Enum.Font.Code
     WMTextLabel.TextSize = 12
     WMTextLabel.Parent = WatermarkBG
+
+    -- FIXED: UIPadding applied ONLY to the text, so the TopLine doesn't shrink!
+    local WMPadding = Instance.new("UIPadding")
+    WMPadding.PaddingLeft = UDim.new(0, 6)
+    WMPadding.PaddingRight = UDim.new(0, 6)
+    WMPadding.Parent = WMTextLabel
 
     local frames = 0
     RunService.RenderStepped:Connect(function() frames = frames + 1 end)
@@ -460,9 +481,6 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.ZIndex = 1 
             GBBlueLine.Parent = GroupBox
             
-            -- ========================================================
-            -- TEXT OVERFLOW & TRUNCATE FIX
-            -- ========================================================
             local TitleContainer = Instance.new("Frame")
             TitleContainer.Position = UDim2.new(0, 10, 0, -2) 
             TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
@@ -472,9 +490,8 @@ function Library:CreateWindow(title, wmText)
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
 
-            -- Stop it from growing past the groupbox width minus padding
             local TitleConstraint = Instance.new("UISizeConstraint")
-            TitleConstraint.MaxSize = Vector2.new(220, 14) -- Prevents breaking the blue line
+            TitleConstraint.MaxSize = Vector2.new(220, 14) 
             TitleConstraint.Parent = TitleContainer
 
             local GBTitle = Instance.new("TextLabel")
@@ -485,7 +502,7 @@ function Library:CreateWindow(title, wmText)
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
-            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd -- Adds "..." if too long
+            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -577,7 +594,6 @@ function Library:CreateWindow(title, wmText)
                 Instance.new("UIStroke", InputBox).Color = Library.Theme.Border
                 Instance.new("UIPadding", InputBox).PaddingLeft = UDim.new(0, 4)
 
-                -- CONFIG SYSTEM REGISTRATION
                 if flag then
                     Library.Flags[flag] = {
                         Value = "",
@@ -632,7 +648,6 @@ function Library:CreateWindow(title, wmText)
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
                 Lbl.Parent = MainBtn
 
-                -- CONFIG SYSTEM REGISTRATION
                 if flag then
                     Library.Flags[flag] = {
                         Value = state,
@@ -744,7 +759,6 @@ function Library:CreateWindow(title, wmText)
                 ValLabel.TextSize = 10
                 ValLabel.Parent = BG
 
-                -- CONFIG SYSTEM REGISTRATION
                 if flag then
                     Library.Flags[flag] = {
                         Value = current,
@@ -856,7 +870,6 @@ function Library:CreateWindow(title, wmText)
                 local DropLayout = Instance.new("UIListLayout")
                 DropLayout.Parent = DropFrame
 
-                -- CONFIG SYSTEM REGISTRATION
                 if flag then
                     Library.Flags[flag] = {
                         Value = list[1] or "",
@@ -1051,7 +1064,6 @@ function Library:CreateWindow(title, wmText)
                     pcall(callback, col)
                 end
 
-                -- CONFIG SYSTEM REGISTRATION
                 if flag then
                     Library.Flags[flag] = {
                         Value = defaultColor,
@@ -1106,6 +1118,60 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging then UpdateSatVal(input)
                         elseif isHueDragging then UpdateHue(input) end
+                    end
+                end)
+            end
+
+            function GBData:CreateKeybind(options)
+                local name = options.Name or "Keybind"
+                local bind = options.Default
+                local callback = options.Callback or function() end
+
+                local BContainer = Instance.new("Frame")
+                BContainer.Size = UDim2.new(1, 0, 0, 14)
+                BContainer.BackgroundTransparency = 1
+                BContainer.Parent = ItemContainer
+
+                local Lbl = Instance.new("TextLabel")
+                Lbl.Size = UDim2.new(1, -40, 1, 0)
+                Lbl.BackgroundTransparency = 1
+                Lbl.Text = name
+                Lbl.TextColor3 = Library.Theme.Text
+                Lbl.Font = Enum.Font.Code
+                Lbl.TextSize = 12
+                Lbl.TextXAlignment = Enum.TextXAlignment.Left
+                Lbl.Parent = BContainer
+
+                local BindBtn = Instance.new("TextButton")
+                BindBtn.Size = UDim2.new(0, 40, 1, 0)
+                BindBtn.Position = UDim2.new(1, -40, 0, 0)
+                BindBtn.BackgroundTransparency = 1
+                BindBtn.Text = bind and "["..bind.."]" or "[None]"
+                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BindBtn.Font = Enum.Font.Code
+                BindBtn.TextSize = 11
+                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
+                BindBtn.Parent = BContainer
+
+                local isListening = false
+                BindBtn.Activated:Connect(function()
+                    BindBtn.Text = "[...]"
+                    isListening = true
+                end)
+
+                UIS.InputBegan:Connect(function(input, gameProcessed)
+                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
+                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
+                            bind = nil
+                            BindBtn.Text = "[None]"
+                        else
+                            bind = input.KeyCode.Name
+                            BindBtn.Text = "[" .. bind .. "]"
+                            pcall(callback, bind)
+                        end
+                        isListening = false
+                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
+                        pcall(callback, bind)
                     end
                 end)
             end
