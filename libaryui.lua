@@ -412,7 +412,7 @@ function Library:CreateWindow(title, wmText)
             GroupBox.BorderSizePixel = 0
             GroupBox.AutomaticSize = Enum.AutomaticSize.Y
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
-            GroupBox.Position = UDim2.new(0, 0, 0, 5)
+            GroupBox.Position = UDim2.new(0, 0, 0, 12)
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
             -- ========================================================
