@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V13 (MOBILE SLIDER FIX & CONFIG CRASH FIX)
+-- BYMAX UI LIBRARY - V14 (FINAL CONFIG & MOBILE FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -395,7 +395,7 @@ function Library:CreateWindow(title, wmText)
                 Btn.MouseLeave:Connect(function() Btn.TextColor3 = Library.Theme.Text end)
                 Btn.Activated:Connect(function() 
                     local success, err = pcall(callback)
-                    if not success then warn("[Bymax UI] Button Error:", err) end
+                    if not success then warn("[Bymax UI Error] Button failed:", err) end
                 end)
             end
 
@@ -966,6 +966,60 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
+            function GBData:CreateKeybind(options)
+                local name = options.Name or "Keybind"
+                local bind = options.Default
+                local callback = options.Callback or function() end
+
+                local BContainer = Instance.new("Frame")
+                BContainer.Size = UDim2.new(1, 0, 0, 14)
+                BContainer.BackgroundTransparency = 1
+                BContainer.Parent = ItemContainer
+
+                local Lbl = Instance.new("TextLabel")
+                Lbl.Size = UDim2.new(1, -40, 1, 0)
+                Lbl.BackgroundTransparency = 1
+                Lbl.Text = name
+                Lbl.TextColor3 = Library.Theme.Text
+                Lbl.Font = Enum.Font.Code
+                Lbl.TextSize = 12
+                Lbl.TextXAlignment = Enum.TextXAlignment.Left
+                Lbl.Parent = BContainer
+
+                local BindBtn = Instance.new("TextButton")
+                BindBtn.Size = UDim2.new(0, 40, 1, 0)
+                BindBtn.Position = UDim2.new(1, -40, 0, 0)
+                BindBtn.BackgroundTransparency = 1
+                BindBtn.Text = bind and "["..bind.."]" or "[None]"
+                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BindBtn.Font = Enum.Font.Code
+                BindBtn.TextSize = 11
+                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
+                BindBtn.Parent = BContainer
+
+                local isListening = false
+                BindBtn.Activated:Connect(function()
+                    BindBtn.Text = "[...]"
+                    isListening = true
+                end)
+
+                UIS.InputBegan:Connect(function(input, gameProcessed)
+                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
+                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
+                            bind = nil
+                            BindBtn.Text = "[None]"
+                        else
+                            bind = input.KeyCode.Name
+                            BindBtn.Text = "[" .. bind .. "]"
+                            pcall(callback, bind)
+                        end
+                        isListening = false
+                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
+                        pcall(callback, bind)
+                    end
+                end)
+            end
+
             return GBData
         end
         return TabData
@@ -976,7 +1030,9 @@ end
 -- ==============================================================================
 -- CONFIG SYSTEM SAFE INJECTION
 -- ==============================================================================
+Library.ConfigManager = {}
 Library.ConfigManager.Folder = "BymaxUI_Configs"
+Library.ConfigManager.Ignore = {}
 
 function Library.ConfigManager:Init()
     local s1, hasFs = pcall(function() return isfolder and makefolder and writefile and readfile end)
