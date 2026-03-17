@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V21 (MODULAR EDITION & PERFECT NOTIFICATIONS)
+-- BYMAX UI LIBRARY - V21 (CLEAN CORE + PERFECT NOTIFICATIONS)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -418,8 +418,8 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.Parent = GroupBox
             
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 10, 0, -2) 
-            TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
+            TitleContainer.Position = UDim2.new(0, 10, 0, -8) 
+            TitleContainer.Size = UDim2.new(0, 0, 0, 16) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
             TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
             TitleContainer.BorderSizePixel = 0
