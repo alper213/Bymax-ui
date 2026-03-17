@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - FINAL PURE EDITION (PERFECT SECTION TITLE & FULL API)
+-- BYMAX UI LIBRARY - V26 (PERFECT PADDING & TITLE LINE FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -296,7 +296,7 @@ function Library:CreateWindow(title, wmText)
             MainFrame.Visible = not MainFrame.Visible
         end
     end)
-    
+
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 25)
     TitleBar.BackgroundColor3 = Library.Theme.MainBG
@@ -358,29 +358,29 @@ function Library:CreateWindow(title, wmText)
 
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        LeftColumn.Position = UDim2.new(0.01, 0, 0, 10) 
+        LeftColumn.Position = UDim2.new(0.01, 0, 0, 15) 
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
         local LeftLayout = Instance.new("UIListLayout")
         LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        LeftLayout.Padding = UDim.new(0, 12)
+        LeftLayout.Padding = UDim.new(0, 15)
         LeftLayout.Parent = LeftColumn
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 10) 
+        RightColumn.Position = UDim2.new(0.51, 0, 0, 15) 
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
         local RightLayout = Instance.new("UIListLayout")
         RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        RightLayout.Padding = UDim.new(0, 12)
+        RightLayout.Padding = UDim.new(0, 15)
         RightLayout.Parent = RightColumn
 
         local function UpdateCanvas()
             local maxY = math.max(LeftLayout.AbsoluteContentSize.Y, RightLayout.AbsoluteContentSize.Y)
-            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 30)
+            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 40)
         end
         LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
@@ -406,32 +406,32 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
-            -- Left Blue Line
+            -- ========================================================
+            -- THE FIX: SPLIT BLUE LINES & PERFECT TITLE POSITION
+            -- ========================================================
             local GBLineL = Instance.new("Frame")
-            GBLineL.Size = UDim2.new(0, 8, 0, 1)
+            GBLineL.Size = UDim2.new(0, 10, 0, 1) -- Sol çizgi tam 10 piksel
             GBLineL.BackgroundColor3 = Library.Theme.Accent
             GBLineL.BorderSizePixel = 0
+            GBLineL.ZIndex = 2
             GBLineL.Parent = GroupBox
             
-            -- ========================================================
-            -- TITLE FIX: PERFECT ALIGNMENT (-7 offset) & OVERFLOW FIX
-            -- ========================================================
             local TitleCont = Instance.new("Frame")
-            TitleCont.Position = UDim2.new(0, 12, 0, -7) -- THE PERFECT CENTER POSITION
+            TitleCont.Position = UDim2.new(0, 14, 0, -7) -- Jilet gibi ortada (-7 offset)
             TitleCont.Size = UDim2.new(0, 0, 0, 14) 
             TitleCont.AutomaticSize = Enum.AutomaticSize.X 
             TitleCont.BackgroundTransparency = 1
             TitleCont.ZIndex = 5 
             TitleCont.Parent = GroupBox
 
-            -- Limit to 30 characters
+            -- Karakter Sınırı (Maks 30, taşarsa ...)
             local cleanName = gbName
             if #cleanName > 30 then cleanName = cleanName:sub(1,27).."..." end
 
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = " " .. cleanName .. " "
+            GBTitle.Text = cleanName
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
@@ -439,16 +439,16 @@ function Library:CreateWindow(title, wmText)
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleCont
 
-            -- Right Blue Line
             local GBLineR = Instance.new("Frame")
             GBLineR.BackgroundColor3 = Library.Theme.Accent
             GBLineR.BorderSizePixel = 0
-            GBLineR.ZIndex = 1 
+            GBLineR.ZIndex = 2
             GBLineR.Parent = GroupBox
 
+            -- Yazı büyüdükçe sağ çizgiyi iter
             local function UpdateTitleLines()
                 local textWidth = TitleCont.AbsoluteSize.X
-                local startR = 12 + textWidth + 4
+                local startR = 14 + textWidth + 4
                 GBLineR.Position = UDim2.new(0, startR, 0, 0)
                 GBLineR.Size = UDim2.new(1, -startR, 0, 1)
             end
@@ -456,16 +456,24 @@ function Library:CreateWindow(title, wmText)
             task.spawn(function() RunService.RenderStepped:Wait() UpdateTitleLines() end)
 
             -- ========================================================
-
+            -- THE FIX: PERFECT PADDING (NO WALL HUGGING)
+            -- ========================================================
             local ItemContainer = Instance.new("Frame")
-            ItemContainer.Size = UDim2.new(1, -16, 0, 0)
-            ItemContainer.Position = UDim2.new(0, 8, 0, 14)
+            ItemContainer.Size = UDim2.new(1, 0, 0, 0)
+            ItemContainer.Position = UDim2.new(0, 0, 0, 12) -- Başlığın hemen altından başlar
             ItemContainer.BackgroundTransparency = 1
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.Parent = GroupBox
+            
             Instance.new("UIListLayout", ItemContainer).SortOrder = Enum.SortOrder.LayoutOrder
             ItemContainer.UIListLayout.Padding = UDim.new(0, 6)
-            Instance.new("UIPadding", ItemContainer).PaddingBottom = UDim.new(0, 8)
+            
+            -- Tipi kaymasın diye 10 piksel duvar koruması
+            local Padding = Instance.new("UIPadding", ItemContainer)
+            Padding.PaddingLeft = UDim.new(0, 10)
+            Padding.PaddingRight = UDim.new(0, 10)
+            Padding.PaddingBottom = UDim.new(0, 10)
+            Padding.PaddingTop = UDim.new(0, 5)
 
             function GBData:CreateLabel(text)
                 local Lbl = Instance.new("TextLabel")
@@ -1042,60 +1050,6 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging then UpdateSatVal(input)
                         elseif isHueDragging then UpdateHue(input) end
-                    end
-                end)
-            end
-
-            function GBData:CreateKeybind(options)
-                local name = options.Name or "Keybind"
-                local bind = options.Default
-                local callback = options.Callback or function() end
-
-                local BContainer = Instance.new("Frame")
-                BContainer.Size = UDim2.new(1, 0, 0, 14)
-                BContainer.BackgroundTransparency = 1
-                BContainer.Parent = ItemContainer
-
-                local Lbl = Instance.new("TextLabel")
-                Lbl.Size = UDim2.new(1, -40, 1, 0)
-                Lbl.BackgroundTransparency = 1
-                Lbl.Text = name
-                Lbl.TextColor3 = Library.Theme.Text
-                Lbl.Font = Enum.Font.Code
-                Lbl.TextSize = 12
-                Lbl.TextXAlignment = Enum.TextXAlignment.Left
-                Lbl.Parent = BContainer
-
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 40, 1, 0)
-                BindBtn.Position = UDim2.new(1, -40, 0, 0)
-                BindBtn.BackgroundTransparency = 1
-                BindBtn.Text = bind and "["..bind.."]" or "[None]"
-                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BindBtn.Font = Enum.Font.Code
-                BindBtn.TextSize = 11
-                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
-                BindBtn.Parent = BContainer
-
-                local isListening = false
-                BindBtn.Activated:Connect(function()
-                    BindBtn.Text = "[...]"
-                    isListening = true
-                end)
-
-                UIS.InputBegan:Connect(function(input, gameProcessed)
-                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
-                            bind = nil
-                            BindBtn.Text = "[None]"
-                        else
-                            bind = input.KeyCode.Name
-                            BindBtn.Text = "[" .. bind .. "]"
-                            pcall(callback, bind)
-                        end
-                        isListening = false
-                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                        pcall(callback, bind)
                     end
                 end)
             end
