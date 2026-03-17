@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V23 (SECTION TITLE OFFSET & OVERFLOW FIX)
+-- BYMAX UI LIBRARY - V24 (DYNAMIC SPLIT BORDER & TITLE FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -414,41 +414,67 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
-            local GBBlueLine = Instance.new("Frame")
-            GBBlueLine.Size = UDim2.new(1, 0, 0, 1)
-            GBBlueLine.BackgroundColor3 = Library.Theme.Accent
-            GBBlueLine.BorderSizePixel = 0
-            GBBlueLine.ZIndex = 1 
-            GBBlueLine.Parent = GroupBox
+            -- ========================================================
+            -- TITLE FIX: DYNAMIC SPLIT LINE & 30 CHAR LIMITER
+            -- ========================================================
             
-            -- ========================================================
-            -- TITLE FIX: POSITION ADJUSTED (-4) & CHARACTER LIMITER
-            -- ========================================================
+            -- Left side of the blue line
+            local GBBlueLineLeft = Instance.new("Frame")
+            GBBlueLineLeft.Size = UDim2.new(0, 8, 0, 1)
+            GBBlueLineLeft.Position = UDim2.new(0, 0, 0, 0)
+            GBBlueLineLeft.BackgroundColor3 = Library.Theme.Accent
+            GBBlueLineLeft.BorderSizePixel = 0
+            GBBlueLineLeft.ZIndex = 1 
+            GBBlueLineLeft.Parent = GroupBox
+            
+            -- Title text container
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 10, 0, -4) -- Pushed down slightly
+            TitleContainer.Position = UDim2.new(0, 12, 0, -7) -- Sits exactly on the line
             TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
-            TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
-            TitleContainer.BorderSizePixel = 0
+            TitleContainer.BackgroundTransparency = 1 
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
 
-            -- Limits the title string to prevent overflow
+            -- Text overflow limiter (Max 30 characters)
             local safeName = gbName
-            if string.len(safeName) > 18 then
-                safeName = string.sub(safeName, 1, 15) .. "..."
+            if string.len(safeName) > 30 then
+                safeName = string.sub(safeName, 1, 27) .. "..."
             end
 
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = " " .. safeName .. " "
+            GBTitle.Text = safeName
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
+
+            -- Right side of the blue line
+            local GBBlueLineRight = Instance.new("Frame")
+            GBBlueLineRight.BackgroundColor3 = Library.Theme.Accent
+            GBBlueLineRight.BorderSizePixel = 0
+            GBBlueLineRight.ZIndex = 1 
+            GBBlueLineRight.Parent = GroupBox
+
+            -- Function to push the right line as text grows
+            local function UpdateLines()
+                local titleWidth = TitleContainer.AbsoluteSize.X
+                local offset = 12 + titleWidth + 4
+                GBBlueLineRight.Position = UDim2.new(0, offset, 0, 0)
+                GBBlueLineRight.Size = UDim2.new(1, -offset, 0, 1)
+            end
+
+            TitleContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateLines)
+            task.spawn(function()
+                RunService.RenderStepped:Wait()
+                UpdateLines()
+            end)
+
+            -- ========================================================
 
             local ItemContainer = Instance.new("Frame")
             ItemContainer.Size = UDim2.new(1, -16, 0, 0)
