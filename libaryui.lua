@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V18 (NOTIFY SYSTEM + CONFIG FIX + TITLE FIX)
+-- BYMAX UI LIBRARY - V19 (SMOOTH NOTIFICATIONS & CUSTOM CONFIG FOLDER)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -32,7 +32,7 @@ for _, v in pairs(TargetParent:GetChildren()) do
 end
 
 -- ==============================================================================
--- NOTIFICATION SYSTEM
+-- SMOOTH NOTIFICATION SYSTEM WITH CLOSE BUTTON
 -- ==============================================================================
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "BymaxNotif"
@@ -52,13 +52,13 @@ UIListLayoutNotif.Padding = UDim.new(0, 10)
 UIListLayoutNotif.Parent = NotifLayout
 
 function Library:Notify(title, text, duration)
-    duration = duration or 3
+    duration = duration or 4
 
     local NContainer = Instance.new("Frame")
-    NContainer.Size = UDim2.new(1, 0, 0, 60)
+    NContainer.Size = UDim2.new(1, 0, 0, 65)
     NContainer.BackgroundColor3 = Library.Theme.DarkBG
     NContainer.BorderSizePixel = 0
-    NContainer.Position = UDim2.new(1, 300, 0, 0) -- Start off-screen
+    NContainer.Position = UDim2.new(1, 300, 0, 0) -- Start off-screen (Right)
     NContainer.Parent = NotifLayout
     Instance.new("UIStroke", NContainer).Color = Library.Theme.Border
 
@@ -69,7 +69,7 @@ function Library:Notify(title, text, duration)
     NTopLine.Parent = NContainer
 
     local NTitle = Instance.new("TextLabel")
-    NTitle.Size = UDim2.new(1, -10, 0, 20)
+    NTitle.Size = UDim2.new(1, -30, 0, 20)
     NTitle.Position = UDim2.new(0, 10, 0, 5)
     NTitle.BackgroundTransparency = 1
     NTitle.Text = title
@@ -79,8 +79,19 @@ function Library:Notify(title, text, duration)
     NTitle.TextXAlignment = Enum.TextXAlignment.Left
     NTitle.Parent = NContainer
 
+    -- CLOSE BUTTON
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+    CloseBtn.Position = UDim2.new(1, -25, 0, 5)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(200, 50, 50)
+    CloseBtn.Font = Enum.Font.Code
+    CloseBtn.TextSize = 14
+    CloseBtn.Parent = NContainer
+
     local NText = Instance.new("TextLabel")
-    NText.Size = UDim2.new(1, -10, 0, 30)
+    NText.Size = UDim2.new(1, -20, 0, 35)
     NText.Position = UDim2.new(0, 10, 0, 25)
     NText.BackgroundTransparency = 1
     NText.Text = text
@@ -92,17 +103,26 @@ function Library:Notify(title, text, duration)
     NText.TextWrapped = true
     NText.Parent = NContainer
 
-    -- Tween In
-    local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
+    -- Smooth Slide In
+    local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     TweenIn:Play()
 
-    -- Tween Out and Destroy
-    task.spawn(function()
-        task.wait(duration)
-        local TweenOut = TweenService:Create(NContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 300, 0, 0)})
+    local closed = false
+    local function CloseNotification()
+        if closed then return end
+        closed = true
+        local TweenOut = TweenService:Create(NContainer, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 300, 0, 0)})
         TweenOut:Play()
         TweenOut.Completed:Wait()
         NContainer:Destroy()
+    end
+
+    CloseBtn.Activated:Connect(CloseNotification)
+
+    -- Auto close after duration
+    task.spawn(function()
+        task.wait(duration)
+        CloseNotification()
     end)
 end
 
@@ -396,12 +416,9 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.ZIndex = 1 
             GBBlueLine.Parent = GroupBox
             
-            -- ========================================================
-            -- TITLE FIX (Removed UISizeConstraint causing invisibility)
-            -- ========================================================
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 10, 0, -8) 
-            TitleContainer.Size = UDim2.new(0, 0, 0, 16) 
+            TitleContainer.Position = UDim2.new(0, 10, 0, -2) 
+            TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
             TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
             TitleContainer.BorderSizePixel = 0
@@ -688,11 +705,13 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
+                
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
                     end
                 end)
+                
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = false
@@ -1130,13 +1149,19 @@ end
 -- UI SETTINGS & ROBUST CONFIG MANAGER
 -- ==============================================================================
 Library.UISettings = {}
-Library.UISettings.Folder = "BymaxUI_Configs"
-Library.UISettings.AutoFile = "BymaxUI_Configs/Autoload.txt"
+Library.UISettings.Folder = "BymaxUI_Configs" -- YOU CAN CHANGE THIS IN YOUR SCRIPT BEFORE CALLING BuildSettingsSection!
+
+function Library.UISettings:GetAutoFile()
+    return self.Folder .. "/Autoload.txt"
+end
 
 function Library.UISettings:Init()
-    pcall(function()
-        if not isfolder(self.Folder) then makefolder(self.Folder) end
+    local s = pcall(function()
+        if isfolder and makefolder then
+            if not isfolder(self.Folder) then makefolder(self.Folder) end
+        end
     end)
+    return s
 end
 
 function Library.UISettings:GetConfigs()
@@ -1165,7 +1190,7 @@ function Library.UISettings:Save(configName)
         writefile(self.Folder .. "/" .. configName .. ".json", encoded)
     end)
     if s then Library:Notify("Config", "Successfully saved: " .. configName)
-    else Library:Notify("Error", "Failed to save config!", 5) end
+    else Library:Notify("Error", "Failed to save config!") end
 end
 
 function Library.UISettings:Load(configName)
@@ -1187,7 +1212,7 @@ function Library.UISettings:Load(configName)
         end
     end)
     if s then Library:Notify("Config", "Successfully loaded: " .. configName)
-    else Library:Notify("Error", "Failed to load config!", 5) end
+    else Library:Notify("Error", "Failed to load config!") end
 end
 
 function Library.UISettings:Delete(configName)
@@ -1199,14 +1224,14 @@ end
 
 function Library.UISettings:SetAutoload(configName)
     self:Init()
-    local s = pcall(function() writefile(self.AutoFile, configName) end)
+    local s = pcall(function() writefile(self:GetAutoFile(), configName) end)
     if s then Library:Notify("Autoload", "Set " .. configName .. " as default.") end
 end
 
 function Library.UISettings:DoAutoload()
     self:Init()
     pcall(function()
-        local content = readfile(self.AutoFile)
+        local content = readfile(self:GetAutoFile())
         if content and content ~= "" then self:Load(content) end
     end)
 end
