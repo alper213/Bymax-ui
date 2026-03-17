@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V26 (PERFECT PADDING & TITLE LINE FIX)
+-- BYMAX UI LIBRARY - V27 (COMPACT PADDING, HOLD-TO-TOGGLE, NEW KEYBIND LIST)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -148,9 +148,8 @@ function Library:CreateWindow(title, wmText)
         if NotifGui then NotifGui:Destroy() end
     end
 
-    local MobileToggleBtn = nil
     if isMobile then
-        MobileToggleBtn = Instance.new("TextButton")
+        local MobileToggleBtn = Instance.new("TextButton")
         MobileToggleBtn.Name = "MobileToggle"
         MobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
         MobileToggleBtn.Position = UDim2.new(1, -70, 0, 15)
@@ -159,13 +158,10 @@ function Library:CreateWindow(title, wmText)
         MobileToggleBtn.Font = Enum.Font.Code
         MobileToggleBtn.TextSize = 13
         MobileToggleBtn.Text = "MENU"
-        MobileToggleBtn.BorderSizePixel = 0
         MobileToggleBtn.Active = true
         MobileToggleBtn.Draggable = true 
         MobileToggleBtn.Parent = ScreenGui
-        local MTCircular = Instance.new("UICorner")
-        MTCircular.CornerRadius = UDim.new(0, 8)
-        MTCircular.Parent = MobileToggleBtn
+        Instance.new("UICorner", MobileToggleBtn).CornerRadius = UDim.new(0, 8)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
         MobileToggleBtn.Activated:Connect(function() ScreenGui.Enabled = not ScreenGui.Enabled end)
     end
@@ -215,11 +211,15 @@ function Library:CreateWindow(title, wmText)
         end
     end)
 
+    -- ========================================================
+    -- BEAUTIFIED KEYBIND LIST
+    -- ========================================================
     local KeybindListBG = Instance.new("Frame")
-    KeybindListBG.Size = UDim2.new(0, 200, 0, 20)
+    KeybindListBG.Size = UDim2.new(0, 200, 0, 0)
     KeybindListBG.Position = UDim2.new(0, 15, 0.4, 0)
     KeybindListBG.BackgroundColor3 = Library.Theme.DarkBG
     KeybindListBG.BorderSizePixel = 0
+    KeybindListBG.AutomaticSize = Enum.AutomaticSize.Y
     KeybindListBG.Active = true
     KeybindListBG.Draggable = true
     KeybindListBG.Visible = not isMobile 
@@ -228,34 +228,46 @@ function Library:CreateWindow(title, wmText)
     Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
 
     local KLTopLine = Instance.new("Frame")
-    KLTopLine.Size = UDim2.new(1, 0, 0, 1)
+    KLTopLine.Size = UDim2.new(1, 0, 0, 2) -- Kalın üst çizgi
     KLTopLine.BackgroundColor3 = Library.Theme.Accent
     KLTopLine.BorderSizePixel = 0
     KLTopLine.Parent = KeybindListBG
 
     local KLTitle = Instance.new("TextLabel")
-    KLTitle.Size = UDim2.new(1, -10, 1, 0)
-    KLTitle.Position = UDim2.new(0, 5, 0, 0)
+    KLTitle.Size = UDim2.new(1, 0, 0, 22)
+    KLTitle.Position = UDim2.new(0, 0, 0, 2)
     KLTitle.BackgroundTransparency = 1
     KLTitle.Text = "Keybinds"
     KLTitle.TextColor3 = Library.Theme.Text
     KLTitle.Font = Enum.Font.Code
     KLTitle.TextSize = 12
-    KLTitle.TextXAlignment = Enum.TextXAlignment.Left
     KLTitle.Parent = KeybindListBG
+
+    local KLDivider = Instance.new("Frame")
+    KLDivider.Size = UDim2.new(1, 0, 0, 1)
+    KLDivider.Position = UDim2.new(0, 0, 0, 24)
+    KLDivider.BackgroundColor3 = Library.Theme.Border
+    KLDivider.BorderSizePixel = 0
+    KLDivider.Parent = KeybindListBG
 
     local KLContainer = Instance.new("Frame")
     KLContainer.Size = UDim2.new(1, 0, 0, 0)
-    KLContainer.Position = UDim2.new(0, 0, 1, 0)
-    KLContainer.BackgroundColor3 = Library.Theme.MainBG
-    KLContainer.BackgroundTransparency = 0
-    KLContainer.BorderSizePixel = 0
+    KLContainer.Position = UDim2.new(0, 0, 0, 25)
+    KLContainer.BackgroundTransparency = 1
     KLContainer.AutomaticSize = Enum.AutomaticSize.Y
     KLContainer.Parent = KeybindListBG
     
     local KLLayout = Instance.new("UIListLayout")
     KLLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    KLLayout.Padding = UDim.new(0, 2)
     KLLayout.Parent = KLContainer
+    
+    local KLPadding = Instance.new("UIPadding")
+    KLPadding.PaddingTop = UDim.new(0, 6)
+    KLPadding.PaddingBottom = UDim.new(0, 6)
+    KLPadding.PaddingLeft = UDim.new(0, 8)
+    KLPadding.PaddingRight = UDim.new(0, 8)
+    KLPadding.Parent = KLContainer
 
     local activeKeybinds = {}
     local function UpdateKeybindList(name, key, state)
@@ -263,8 +275,7 @@ function Library:CreateWindow(title, wmText)
         if not key or key == "" then return end
         if not activeKeybinds[name] then
             local item = Instance.new("TextLabel")
-            item.Size = UDim2.new(1, -10, 0, 16)
-            item.Position = UDim2.new(0, 5, 0, 0)
+            item.Size = UDim2.new(1, 0, 0, 14)
             item.BackgroundTransparency = 1
             item.Font = Enum.Font.Code
             item.TextSize = 11
@@ -272,8 +283,9 @@ function Library:CreateWindow(title, wmText)
             item.Parent = KLContainer
             activeKeybinds[name] = item
         end
-        activeKeybinds[name].Text = "[" .. key .. "] " .. name
-        activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(130, 130, 130)
+        activeKeybinds[name].Text = string.format("[%s] %s", key, name)
+        -- Glow effect on accent color when active
+        activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(110, 110, 110)
     end
 
     local MainFrame = Instance.new("Frame")
@@ -356,31 +368,34 @@ function Library:CreateWindow(title, wmText)
         Page.Visible = (#self.Tabs == 0)
         Page.Parent = ContentArea
 
+        -- ========================================================
+        -- PADDING COMPACT FIX: Tighter top gaps
+        -- ========================================================
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        LeftColumn.Position = UDim2.new(0.01, 0, 0, 15) 
+        LeftColumn.Position = UDim2.new(0.01, 0, 0, 8) -- Pushed up
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
         local LeftLayout = Instance.new("UIListLayout")
         LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        LeftLayout.Padding = UDim.new(0, 15)
+        LeftLayout.Padding = UDim.new(0, 10)
         LeftLayout.Parent = LeftColumn
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 15) 
+        RightColumn.Position = UDim2.new(0.51, 0, 0, 8) -- Pushed up
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
         local RightLayout = Instance.new("UIListLayout")
         RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        RightLayout.Padding = UDim.new(0, 15)
+        RightLayout.Padding = UDim.new(0, 10)
         RightLayout.Parent = RightColumn
 
         local function UpdateCanvas()
             local maxY = math.max(LeftLayout.AbsoluteContentSize.Y, RightLayout.AbsoluteContentSize.Y)
-            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 40)
+            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 20)
         end
         LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
@@ -406,25 +421,22 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
-            -- ========================================================
-            -- THE FIX: SPLIT BLUE LINES & PERFECT TITLE POSITION
-            -- ========================================================
+            -- Left Blue Line
             local GBLineL = Instance.new("Frame")
-            GBLineL.Size = UDim2.new(0, 10, 0, 1) -- Sol çizgi tam 10 piksel
+            GBLineL.Size = UDim2.new(0, 10, 0, 1) 
             GBLineL.BackgroundColor3 = Library.Theme.Accent
             GBLineL.BorderSizePixel = 0
             GBLineL.ZIndex = 2
             GBLineL.Parent = GroupBox
             
             local TitleCont = Instance.new("Frame")
-            TitleCont.Position = UDim2.new(0, 14, 0, -7) -- Jilet gibi ortada (-7 offset)
+            TitleCont.Position = UDim2.new(0, 14, 0, -7) 
             TitleCont.Size = UDim2.new(0, 0, 0, 14) 
             TitleCont.AutomaticSize = Enum.AutomaticSize.X 
             TitleCont.BackgroundTransparency = 1
             TitleCont.ZIndex = 5 
             TitleCont.Parent = GroupBox
 
-            -- Karakter Sınırı (Maks 30, taşarsa ...)
             local cleanName = gbName
             if #cleanName > 30 then cleanName = cleanName:sub(1,27).."..." end
 
@@ -445,7 +457,6 @@ function Library:CreateWindow(title, wmText)
             GBLineR.ZIndex = 2
             GBLineR.Parent = GroupBox
 
-            -- Yazı büyüdükçe sağ çizgiyi iter
             local function UpdateTitleLines()
                 local textWidth = TitleCont.AbsoluteSize.X
                 local startR = 14 + textWidth + 4
@@ -456,11 +467,11 @@ function Library:CreateWindow(title, wmText)
             task.spawn(function() RunService.RenderStepped:Wait() UpdateTitleLines() end)
 
             -- ========================================================
-            -- THE FIX: PERFECT PADDING (NO WALL HUGGING)
+            -- ITEM CONTAINER: Tighter spacing
             -- ========================================================
             local ItemContainer = Instance.new("Frame")
             ItemContainer.Size = UDim2.new(1, 0, 0, 0)
-            ItemContainer.Position = UDim2.new(0, 0, 0, 12) -- Başlığın hemen altından başlar
+            ItemContainer.Position = UDim2.new(0, 0, 0, 8) -- Pushed up
             ItemContainer.BackgroundTransparency = 1
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.Parent = GroupBox
@@ -468,12 +479,11 @@ function Library:CreateWindow(title, wmText)
             Instance.new("UIListLayout", ItemContainer).SortOrder = Enum.SortOrder.LayoutOrder
             ItemContainer.UIListLayout.Padding = UDim.new(0, 6)
             
-            -- Tipi kaymasın diye 10 piksel duvar koruması
             local Padding = Instance.new("UIPadding", ItemContainer)
             Padding.PaddingLeft = UDim.new(0, 10)
             Padding.PaddingRight = UDim.new(0, 10)
             Padding.PaddingBottom = UDim.new(0, 10)
-            Padding.PaddingTop = UDim.new(0, 5)
+            Padding.PaddingTop = UDim.new(0, 4) -- Tighter top padding
 
             function GBData:CreateLabel(text)
                 local Lbl = Instance.new("TextLabel")
@@ -551,10 +561,14 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
+            -- ========================================================
+            -- THE FIX: ADDED HOLD OPTION TO TOGGLES
+            -- ========================================================
             function GBData:CreateToggle(options)
                 local name = options.Name or "Toggle"
                 local state = options.Default or false
                 local bind = options.Keybind 
+                local isHold = options.Hold or false -- Hold Logic
                 local flag = options.Flag
                 local callback = options.Callback or function() end
 
@@ -590,8 +604,12 @@ function Library:CreateWindow(title, wmText)
 
                 if flag then Library.Flags[flag] = { Value = state } end
 
-                local function Fire()
-                    state = not state
+                local function Fire(forceState)
+                    if forceState ~= nil then
+                        state = forceState
+                    else
+                        state = not state
+                    end
                     if flag then Library.Flags[flag].Value = state end
                     CheckBox.BackgroundColor3 = state and Library.Theme.Accent or Library.Theme.ItemBG
                     if bind then UpdateKeybindList(name, bind, state) end
@@ -601,7 +619,10 @@ function Library:CreateWindow(title, wmText)
                 if bind then UpdateKeybindList(name, bind, state) end
                 if state then pcall(callback, state) end
 
-                MainBtn.Activated:Connect(Fire)
+                MainBtn.Activated:Connect(function()
+                    -- If it's a hold toggle, clicking it shouldn't work normally, but let's allow manual toggle
+                    Fire()
+                end)
 
                 if bind and not isMobile then
                     local BindBtn = Instance.new("TextButton")
@@ -633,7 +654,20 @@ function Library:CreateWindow(title, wmText)
                             UpdateKeybindList(name, bind, state)
                             isListening = false
                         elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                            Fire()
+                            if isHold then
+                                Fire(true) -- Turn ON when held
+                            else
+                                Fire() -- Normal toggle
+                            end
+                        end
+                    end)
+
+                    -- Hold release logic
+                    UIS.InputEnded:Connect(function(input, gameProcessed)
+                        if not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
+                            if isHold then
+                                Fire(false) -- Turn OFF when released
+                            end
                         end
                     end)
                 end
