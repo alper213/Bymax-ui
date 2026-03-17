@@ -1,89 +1,53 @@
 -- ==============================================================================
--- BYMAX SAVE MANAGER - V3 (ANTI-CRASH & ROOT FALLBACK SYSTEM)
+-- BYMAX SAVE MANAGER - V4 (NO-FOLDER ANTI-CRASH SYSTEM)
 -- ==============================================================================
 local HttpService = game:GetService("HttpService")
 
 local SaveManager = {
-    Folder = "BymaxConfigs",
-    Library = nil,
-    RootMode = false,
-    Tested = false
+    Prefix = "BymaxCfg_", -- No folders! We just prefix the file names.
+    Library = nil
 }
 
-function SaveManager:SetLibrary(lib) 
-    self.Library = lib 
+function SaveManager:SetLibrary(lib)
+    self.Library = lib
 end
 
-function SaveManager:SetFolder(folderName) 
-    self.Folder = folderName 
-end
-
--- ========================================================
--- SMART FOLDER BYPASS LOGIC
--- ========================================================
-function SaveManager:CheckFolder()
-    if self.Tested then return end
-    self.Tested = true
-    
-    if not isfolder or not makefolder then
-        self.RootMode = true
-        return
-    end
-    
-    -- Try to make folder ONLY ONCE. If executor cries, fallback to root forever.
-    local s = pcall(function()
-        if not isfolder(self.Folder) then 
-            makefolder(self.Folder) 
-        end
-    end)
-    
-    if not s then 
-        self.RootMode = true 
-    else
-        local s2, exists = pcall(isfolder, self.Folder)
-        if not s2 or not exists then 
-            self.RootMode = true 
-        end
-    end
+-- Completely abandoned Folders to bypass executor C++ crashes.
+function SaveManager:SetPrefix(prefixName)
+    self.Prefix = prefixName .. "_"
 end
 
 function SaveManager:GetPath(name)
-    self:CheckFolder()
-    if self.RootMode then
-        return self.Folder .. "_" .. name .. ".json"
-    else
-        return self.Folder .. "/" .. name .. ".json"
-    end
+    return self.Prefix .. name .. ".json"
 end
 
 function SaveManager:GetAutoPath()
-    self:CheckFolder()
-    if self.RootMode then
-        return self.Folder .. "_Autoload.txt"
-    else
-        return self.Folder .. "/Autoload.txt"
-    end
+    return self.Prefix .. "Autoload.txt"
 end
 
 -- ========================================================
 -- CORE SAVE FUNCTIONS
 -- ========================================================
 function SaveManager:GetConfigs()
-    self:CheckFolder()
     local list = {}
     
-    local path = self.RootMode and "" or self.Folder
-    local s, files = pcall(listfiles, path)
-    
-    if s and files then
+    -- Safe listfiles check for root directory across different executors
+    local s, files = pcall(function() return listfiles("") end)
+    if not s or type(files) ~= "table" then
+        s, files = pcall(function() return listfiles(".") end)
+    end
+    if not s or type(files) ~= "table" then
+        s, files = pcall(function() return listfiles() end)
+    end
+
+    if s and type(files) == "table" then
         for _, file in ipairs(files) do
-            local fileName
-            if self.RootMode then
-                fileName = file:match(self.Folder .. "_([^/\\]+)%.json$")
-            else
-                fileName = file:match("([^/\\]+)%.json$")
+            -- Match files that start with our prefix
+            local pattern = self.Prefix .. "([^/\\]+)%.json$"
+            local fileName = file:match(pattern)
+            if fileName then 
+                table.insert(list, fileName) 
             end
-            if fileName then table.insert(list, fileName) end
         end
     end
     return list
@@ -91,7 +55,6 @@ end
 
 function SaveManager:Save(name)
     if not self.Library or not name or name == "" then return end
-    self:CheckFolder()
     
     local data = {}
     for flag, element in pairs(self.Library.Flags) do
@@ -107,18 +70,20 @@ function SaveManager:Save(name)
     end)
     
     if s then 
-        self.Library:Notify("Config Saved", "Saved: " .. name, 3)
+        self.Library:Notify("Config Saved", "Saved:\n" .. name, 3)
     else 
-        self.Library:Notify("Error", "Save failed!", 4) 
+        self.Library:Notify("Error", "Save failed! Executor blocked writefile.", 4) 
+        warn("[Bymax SaveManager] Save Error:", err)
     end
 end
 
 function SaveManager:Load(name)
     if not self.Library or not name or name == "" then return end
-    self:CheckFolder()
     
     local s, err = pcall(function()
-        local decoded = HttpService:JSONDecode(readfile(self:GetPath(name)))
+        local content = readfile(self:GetPath(name))
+        local decoded = HttpService:JSONDecode(content)
+        
         for flag, savedValue in pairs(decoded) do
             if self.Library.Flags[flag] and self.Library.Flags[flag].Set then
                 if type(savedValue) == "table" and savedValue.IsColor3 then
@@ -130,32 +95,30 @@ function SaveManager:Load(name)
     end)
     
     if s then 
-        self.Library:Notify("Config Loaded", "Loaded: " .. name, 3)
+        self.Library:Notify("Config Loaded", "Loaded:\n" .. name, 3)
     else 
-        self.Library:Notify("Error", "Load failed!", 4) 
+        self.Library:Notify("Error", "Load failed! File broken/missing.", 4) 
+        warn("[Bymax SaveManager] Load Error:", err)
     end
 end
 
 function SaveManager:Delete(name)
     if not name or name == "" then return end
-    self:CheckFolder()
     local s = pcall(function() delfile(self:GetPath(name)) end)
     if s then 
-        self.Library:Notify("Config Deleted", "Removed: " .. name, 3) 
+        self.Library:Notify("Config Deleted", "Removed:\n" .. name, 3) 
     end
 end
 
 function SaveManager:SetAutoload(name)
     if not name or name == "" then return end
-    self:CheckFolder()
     local s = pcall(function() writefile(self:GetAutoPath(), name) end)
     if s then 
-        self.Library:Notify("Autoload Set", "Default: " .. name, 3) 
+        self.Library:Notify("Autoload Set", "Default config:\n" .. name, 3) 
     end
 end
 
 function SaveManager:DoAutoload()
-    self:CheckFolder()
     local s, content = pcall(readfile, self:GetAutoPath())
     if s and content and content ~= "" then
         self.Library:Notify("Autoload", "Loading default config...", 2)
@@ -167,7 +130,10 @@ end
 -- CONFIG UI BUILDER
 -- ========================================================
 function SaveManager:BuildConfigSection(targetTab)
-    if not self.Library then return end
+    if not self.Library then 
+        warn("[Bymax SaveManager] You must call SaveManager:SetLibrary(Library) first!") 
+        return 
+    end
     
     local Group = targetTab:CreateGroupbox("Configuration", "Right")
     local configNameBox, selectedConfig = "", ""
@@ -225,7 +191,7 @@ function SaveManager:BuildConfigSection(targetTab)
         Name = "Refresh List", 
         Callback = function() 
             drop:Refresh(self:GetConfigs())
-            self.Library:Notify("Refresh", "Config list updated!", 2) 
+            self.Library:Notify("Refreshed", "Config list updated!", 2) 
         end 
     })
 end
