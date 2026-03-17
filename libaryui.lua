@@ -363,6 +363,7 @@ function Library:CreateWindow(title, wmText)
 
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.49, 0, 1, 0)
+        LeftColumn.Position = UDim2.new(0.01, 0, 0, 15) -- Pushed 15px from top
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
@@ -373,7 +374,7 @@ function Library:CreateWindow(title, wmText)
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.49, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 0)
+        RightColumn.Position = UDim2.new(0.51, 0, 0, 15) -- Pushed 15px from top
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
