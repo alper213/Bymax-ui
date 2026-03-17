@@ -1,81 +1,110 @@
-Bymax UI Library V28 - Official Documentation
 
-Bymax UI is a lightweight and high-performance interface library created for Roblox scripters. This version (V28) focuses on fixing common issues found in other libraries such as alignment bugs, mobile compatibility problems, and executor crashes.
 
-Main Features
-- Mobile Support: All sliders, buttons, and dropdowns are fully optimized for touch inputs.
-- Smart Notifications: Smooth UI animations for user alerts located at the bottom right.
-- Root Saving System: Folder creation is bypassed to prevent common executor crashes. All data is handled via .txt files in the workspace.
-- Hold Logic: Toggles now support a hold-to-use mode, useful for specific features like aimbots.
-- Premium Design: Active tabs include indicator lines and section titles are perfectly centered with dynamic borders.
+```markdown
+# Bymax UI Library V28 (Official Release)
 
-Getting Started
+Bymax UI is a high-performance, lightweight interface library designed specifically for Roblox scripters. This version focuses on eliminating alignment bugs, ensuring mobile compatibility, and preventing executor-level crashes common in other libraries.
 
-To initialize the library, use the following loadstring:
+![Menu Preview](https://github.com/alper213/Bymax-ui/blob/main/Ekran%20g%C3%B6r%C3%BCnt%C3%BCs%C3%BC%202026-03-17%20231144.png?raw=true)
 
-local Library = loadstring(game:HttpGet("https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua"))()
-local Window = Library:CreateWindow("Your Hub Name", "Version Info")
+## Key Technical Features
 
-UI Structure
+* **Mobile Optimization:** Optimized touch-target areas for sliders, buttons, and dropdowns.
+* **Tweened Notifications:** Custom notification system with smooth slide animations.
+* **Anti-Crash Logic:** Bypasses problematic folder creation methods to ensure stability across all executors. Saves data as .txt in the root workspace.
+* **Hold-to-Use Logic:** Integrated support for toggles that only activate while a key is held down.
+* **Premium Aesthetics:** Dynamic borders that adjust to title length and active tab indicators.
 
-1. Creating Tabs
-Tabs are the main navigation buttons at the top of the menu.
+---
 
-local MainTab = Window:CreateTab("Main")
+## Installation
 
-2. Creating Groupboxes
-Groupboxes are the sections that contain your cheat features. You can place them on the "Left" or "Right" side.
+To load the library into your script, use the following code block:
 
-local Section = MainTab:CreateGroupbox("Aimbot Settings", "Left")
+```lua
+local Library = loadstring(game:HttpGet("[https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua](https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua)"))()
+local Window = Library:CreateWindow("Bymax Universal Hub", "V28 Premium")
+```
 
-3. Interactive Elements
+---
 
-Toggle with Keybind and Hold Mode:
+## Quick Start Guide
 
-Section:CreateToggle({
-    Name = "Legit Aim",
+### 1. Navigation
+Create tabs for the main menu header.
+
+```lua
+local Tab = Window:CreateTab("Main")
+```
+
+### 2. Organizing Features
+Use groupboxes to categorize your scripts. Supports "Left" and "Right" alignments.
+
+```lua
+local Group = Tab:CreateGroupbox("Aimbot Settings", "Left")
+```
+
+### 3. Adding Interactive Elements
+
+#### Toggles (Supports Hold Mode)
+```lua
+Group:CreateToggle({
+    Name = "Legit Mode",
     Default = false,
     Keybind = "E",
-    Hold = true, -- Set to true if you want it to work only while pressing the key
+    Hold = true, -- Feature stays active only while holding 'E'
     Callback = function(Value)
-        print("Status:", Value)
+        print("Feature Status:", Value)
     end
 })
+```
 
-Slider:
-
-Section:CreateSlider({
-    Name = "WalkSpeed",
+#### Dynamic Sliders
+```lua
+Group:CreateSlider({
+    Name = "Walkspeed",
     Min = 16,
-    Max = 200,
+    Max = 100,
     Default = 16,
-    Increment = 1,
     Callback = function(Value)
         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
     end
 })
+```
 
-Dynamic Dropdown:
+#### Advanced Dropdowns
+Supports real-time refreshing and value setting.
 
-local myDropdown = Section:CreateDropdown({
-    Name = "Select Mode",
-    Options = {"Standard", "Rage", "Legit"},
-    Callback = function(Value)
-        print("Selected:", Value)
-    end
+```lua
+local Dropdown = Group:CreateDropdown({
+    Name = "Targets",
+    Options = {"Player1", "Player2"},
+    Callback = function(v) print(v) end
 })
 
--- To refresh options later:
--- myDropdown:Refresh({"New1", "New2"})
+-- To refresh later: Dropdown:Refresh({"NewPlayer1", "NewPlayer2"})
+```
 
--- To force a value:
--- myDropdown:Set("Rage")
+---
 
-Utility Functions
-- Library:Notify("Title", "Text", Duration) - Shows a popup notification.
-- Window:Unload() - Completely removes the UI and stops all processes.
-- Library.Watermark.Visible = false - Hides the watermark.
-- Library.KeybindList.Visible = false - Hides the keybind list widget.
+## Full API Documentation & Example
+I have provided a comprehensive example script that showcases every single feature and function available in this library.
 
-Credits
-Developed by Alper / Bymax. Use it in your projects as you wish, but keep the core logic intact.
+👉 [**Click here to view the Full Example Script**](https://github.com/alper213/Bymax-ui/raw/refs/heads/main/example.lua)
+
+---
+
+## Global Functions
+
+| Function | Description |
+| :--- | :--- |
+| `Library:Notify(Title, Text, Time)` | Pops up a smooth notification. |
+| `Window:Unload()` | Destroys the UI and stops all library processes. |
+| `Library.Watermark.Visible = false` | Controls the visibility of the top-left watermark. |
+| `Library.KeybindList.Visible = false` | Controls the visibility of the active keybinds widget. |
+
+---
+
+
+
+Kral, bu şekilde hem ekran görüntün görünecek hem de "Full Example Script" kısmına basan adam direkt senin `example.lua` dosyana gidecek. Her şey tam istediğin gibi jilet gibi duruyor. İyi uykular!
