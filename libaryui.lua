@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V12.1 (MAKEFOLDER FIX & WATERMARK LINE FIX)
+-- BYMAX UI LIBRARY - V13 (MOBILE SLIDER FIX & CONFIG CRASH FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -32,163 +32,7 @@ for _, v in pairs(TargetParent:GetChildren()) do
 end
 
 -- ==============================================================================
--- CONFIG MANAGER (CRASH FIX)
--- ==============================================================================
-Library.ConfigManager = {
-    Folder = "BymaxUI_Configs",
-    Ignore = {}
-}
-
-function Library.ConfigManager:Init()
-    if not isfolder or not makefolder or not writefile or not readfile then
-        warn("[Bymax UI] Your executor does not support File System. Configs disabled.")
-        return false
-    end
-    
-    -- PCALL ADDED: Prevents "Failed to create directory" error from crashing the UI
-    if not isfolder(self.Folder) then 
-        local s, err = pcall(function() makefolder(self.Folder) end)
-        if not s then
-            warn("[Bymax UI] Failed to create config folder. Configs will not save. Error: " .. tostring(err))
-            return false
-        end
-    end
-    return true
-end
-
-function Library.ConfigManager:GetConfigs()
-    local list = {}
-    if self:Init() and isfolder(self.Folder) then
-        local s, files = pcall(listfiles, self.Folder)
-        if s and files then
-            for _, file in ipairs(files) do
-                local fileName = file:match("([^/\\]+)%.json$")
-                if fileName then table.insert(list, fileName) end
-            end
-        end
-    end
-    return list
-end
-
-function Library.ConfigManager:Save(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local data = {}
-    
-    for flag, element in pairs(Library.Flags) do
-        if not self.Ignore[flag] then
-            local val = element.Value
-            if typeof(val) == "Color3" then
-                val = {R = val.R, G = val.G, B = val.B, IsColor3 = true}
-            end
-            data[flag] = val
-        end
-    end
-    
-    local success, encoded = pcall(function() return HttpService:JSONEncode(data) end)
-    if success then
-        local s, err = pcall(function() writefile(self.Folder .. "/" .. configName .. ".json", encoded) end)
-        if s then
-            print("[Bymax UI] Saved Config:", configName)
-        else
-            warn("[Bymax UI] Writefile failed:", err)
-        end
-    else
-        warn("[Bymax UI] Failed to encode config!")
-    end
-end
-
-function Library.ConfigManager:Load(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local path = self.Folder .. "/" .. configName .. ".json"
-    
-    if isfile(path) then
-        local fileContent
-        local s, err = pcall(function() fileContent = readfile(path) end)
-        if not s then return warn("[Bymax UI] Readfile failed:", err) end
-
-        local success, decoded = pcall(function() return HttpService:JSONDecode(fileContent) end)
-        if success and type(decoded) == "table" then
-            for flag, savedValue in pairs(decoded) do
-                if Library.Flags[flag] and Library.Flags[flag].Set then
-                    if type(savedValue) == "table" and savedValue.IsColor3 then
-                        savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
-                    end
-                    pcall(function() Library.Flags[flag]:Set(savedValue) end)
-                end
-            end
-            print("[Bymax UI] Loaded Config:", configName)
-        else
-            warn("[Bymax UI] Failed to decode config file!")
-        end
-    end
-end
-
-function Library.ConfigManager:Delete(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local path = self.Folder .. "/" .. configName .. ".json"
-    if isfile(path) then
-        pcall(delfile, path)
-        print("[Bymax UI] Deleted Config:", configName)
-    end
-end
-
-function Library.ConfigManager:BuildConfigSection(targetTab)
-    self:Init()
-    local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
-    
-    local configNameBox = ""
-    local selectedConfig = ""
-
-    ConfigGroup:CreateTextBox({
-        Name = "Config Name",
-        Placeholder = "Enter name...",
-        Callback = function(val) configNameBox = val end
-    })
-
-    local configDropdown = ConfigGroup:CreateDropdown({
-        Name = "Select Config",
-        Options = self:GetConfigs(),
-        Callback = function(val) selectedConfig = val end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Save Config",
-        Callback = function()
-            local nameToSave = (configNameBox ~= "") and configNameBox or selectedConfig
-            if nameToSave ~= "" then
-                self:Save(nameToSave)
-                configDropdown:Refresh(self:GetConfigs())
-            end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Load Config",
-        Callback = function()
-            if selectedConfig ~= "" then self:Load(selectedConfig) end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Delete Config",
-        Callback = function()
-            if selectedConfig ~= "" then
-                self:Delete(selectedConfig)
-                configDropdown:Refresh(self:GetConfigs())
-                configDropdown:Set("...")
-                selectedConfig = ""
-            end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Refresh List",
-        Callback = function() configDropdown:Refresh(self:GetConfigs()) end
-    })
-end
-
--- ==============================================================================
--- MAIN LIBRARY
+-- MAIN LIBRARY CORE
 -- ==============================================================================
 function Library:CreateWindow(title, wmText)
     local WindowData = {}
@@ -225,9 +69,7 @@ function Library:CreateWindow(title, wmText)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
     end
 
-    -- ========================================================
-    -- WATERMARK FIX (Line goes all the way now)
-    -- ========================================================
+    -- Watermark
     local WatermarkBG = Instance.new("Frame")
     WatermarkBG.AutomaticSize = Enum.AutomaticSize.X
     WatermarkBG.Size = UDim2.new(0, 0, 0, 20)
@@ -255,7 +97,6 @@ function Library:CreateWindow(title, wmText)
     WMTextLabel.TextSize = 12
     WMTextLabel.Parent = WatermarkBG
 
-    -- FIXED: UIPadding applied ONLY to the text, so the TopLine doesn't shrink!
     local WMPadding = Instance.new("UIPadding")
     WMPadding.PaddingLeft = UDim.new(0, 6)
     WMPadding.PaddingRight = UDim.new(0, 6)
@@ -554,7 +395,7 @@ function Library:CreateWindow(title, wmText)
                 Btn.MouseLeave:Connect(function() Btn.TextColor3 = Library.Theme.Text end)
                 Btn.Activated:Connect(function() 
                     local success, err = pcall(callback)
-                    if not success then warn("[Bymax UI Error] Button failed:", err) end
+                    if not success then warn("[Bymax UI] Button Error:", err) end
                 end)
             end
 
@@ -776,11 +617,14 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
+                
+                -- FIXED MOBILE SLIDER LOGIC
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
                     end
                 end)
+                
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = false
@@ -789,7 +633,7 @@ function Library:CreateWindow(title, wmText)
                 
                 UIS.InputChanged:Connect(function(input)
                     if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        local positionX = input.Position.X
+                        local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
                         local sliderPos = BG.AbsolutePosition.X
                         local sliderSize = BG.AbsoluteSize.X
                         local percent = math.clamp((positionX - sliderPos) / sliderSize, 0, 1)
@@ -1122,65 +966,139 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
-            function GBData:CreateKeybind(options)
-                local name = options.Name or "Keybind"
-                local bind = options.Default
-                local callback = options.Callback or function() end
-
-                local BContainer = Instance.new("Frame")
-                BContainer.Size = UDim2.new(1, 0, 0, 14)
-                BContainer.BackgroundTransparency = 1
-                BContainer.Parent = ItemContainer
-
-                local Lbl = Instance.new("TextLabel")
-                Lbl.Size = UDim2.new(1, -40, 1, 0)
-                Lbl.BackgroundTransparency = 1
-                Lbl.Text = name
-                Lbl.TextColor3 = Library.Theme.Text
-                Lbl.Font = Enum.Font.Code
-                Lbl.TextSize = 12
-                Lbl.TextXAlignment = Enum.TextXAlignment.Left
-                Lbl.Parent = BContainer
-
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 40, 1, 0)
-                BindBtn.Position = UDim2.new(1, -40, 0, 0)
-                BindBtn.BackgroundTransparency = 1
-                BindBtn.Text = bind and "["..bind.."]" or "[None]"
-                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BindBtn.Font = Enum.Font.Code
-                BindBtn.TextSize = 11
-                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
-                BindBtn.Parent = BContainer
-
-                local isListening = false
-                BindBtn.Activated:Connect(function()
-                    BindBtn.Text = "[...]"
-                    isListening = true
-                end)
-
-                UIS.InputBegan:Connect(function(input, gameProcessed)
-                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
-                            bind = nil
-                            BindBtn.Text = "[None]"
-                        else
-                            bind = input.KeyCode.Name
-                            BindBtn.Text = "[" .. bind .. "]"
-                            pcall(callback, bind)
-                        end
-                        isListening = false
-                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                        pcall(callback, bind)
-                    end
-                end)
-            end
-
             return GBData
         end
         return TabData
     end
     return WindowData
+end
+
+-- ==============================================================================
+-- CONFIG SYSTEM SAFE INJECTION
+-- ==============================================================================
+Library.ConfigManager.Folder = "BymaxUI_Configs"
+
+function Library.ConfigManager:Init()
+    local s1, hasFs = pcall(function() return isfolder and makefolder and writefile and readfile end)
+    if not s1 or not hasFs then return false end
+    
+    local folderExists = false
+    pcall(function() folderExists = isfolder(self.Folder) end)
+    
+    if not folderExists then
+        local s2, err = pcall(function() makefolder(self.Folder) end)
+        if not s2 then return false end
+    end
+    return true
+end
+
+function Library.ConfigManager:GetConfigs()
+    local list = {}
+    if self:Init() then
+        local s, files = pcall(listfiles, self.Folder)
+        if s and files then
+            for _, file in ipairs(files) do
+                local fileName = file:match("([^/\\]+)%.json$")
+                if fileName then table.insert(list, fileName) end
+            end
+        end
+    end
+    return list
+end
+
+function Library.ConfigManager:Save(configName)
+    if not configName or configName == "" or not self:Init() then return end
+    local data = {}
+    for flag, element in pairs(Library.Flags) do
+        local val = element.Value
+        if typeof(val) == "Color3" then val = {R = val.R, G = val.G, B = val.B, IsColor3 = true} end
+        data[flag] = val
+    end
+    local s1, encoded = pcall(function() return HttpService:JSONEncode(data) end)
+    if s1 then
+        pcall(function() writefile(self.Folder .. "/" .. configName .. ".json", encoded) end)
+    end
+end
+
+function Library.ConfigManager:Load(configName)
+    if not configName or configName == "" or not self:Init() then return end
+    local path = self.Folder .. "/" .. configName .. ".json"
+    
+    local s1, fileContent = pcall(function() return readfile(path) end)
+    if s1 and fileContent then
+        local s2, decoded = pcall(function() return HttpService:JSONDecode(fileContent) end)
+        if s2 and type(decoded) == "table" then
+            for flag, savedValue in pairs(decoded) do
+                if Library.Flags[flag] and Library.Flags[flag].Set then
+                    if type(savedValue) == "table" and savedValue.IsColor3 then
+                        savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
+                    end
+                    pcall(function() Library.Flags[flag]:Set(savedValue) end)
+                end
+            end
+        end
+    end
+end
+
+function Library.ConfigManager:Delete(configName)
+    if not configName or configName == "" or not self:Init() then return end
+    local path = self.Folder .. "/" .. configName .. ".json"
+    pcall(delfile, path)
+end
+
+function Library.ConfigManager:BuildConfigSection(targetTab)
+    if not self:Init() then return end
+    
+    local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
+    local configNameBox = ""
+    local selectedConfig = ""
+
+    ConfigGroup:CreateTextBox({
+        Name = "Config Name",
+        Placeholder = "Enter name...",
+        Callback = function(val) configNameBox = val end
+    })
+
+    local configDropdown = ConfigGroup:CreateDropdown({
+        Name = "Select Config",
+        Options = self:GetConfigs(),
+        Callback = function(val) selectedConfig = val end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Save Config",
+        Callback = function()
+            local nameToSave = (configNameBox ~= "") and configNameBox or selectedConfig
+            if nameToSave ~= "" then
+                self:Save(nameToSave)
+                configDropdown:Refresh(self:GetConfigs())
+            end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Load Config",
+        Callback = function()
+            if selectedConfig ~= "" then self:Load(selectedConfig) end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Delete Config",
+        Callback = function()
+            if selectedConfig ~= "" then
+                self:Delete(selectedConfig)
+                configDropdown:Refresh(self:GetConfigs())
+                configDropdown:Set("...")
+                selectedConfig = ""
+            end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Refresh List",
+        Callback = function() configDropdown:Refresh(self:GetConfigs()) end
+    })
 end
 
 return Library
