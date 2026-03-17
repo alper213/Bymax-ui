@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V14 (FINAL CONFIG & MOBILE FIX)
+-- BYMAX UI LIBRARY - V15 (RAINBOW COLORPICKER & AUTOLOAD CONFIG)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -18,7 +18,6 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Universal GUI Parent Logic
 local TargetParent
 local success = pcall(function() TargetParent = gethui and gethui() or game:GetService("CoreGui") end)
 if not success or not TargetParent then
@@ -47,7 +46,6 @@ function Library:CreateWindow(title, wmText)
 
     function WindowData:Unload() ScreenGui:Destroy() end
 
-    -- Mobile Toggle
     local MobileToggleBtn = nil
     if isMobile then
         MobileToggleBtn = Instance.new("TextButton")
@@ -69,7 +67,6 @@ function Library:CreateWindow(title, wmText)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
     end
 
-    -- Watermark
     local WatermarkBG = Instance.new("Frame")
     WatermarkBG.AutomaticSize = Enum.AutomaticSize.X
     WatermarkBG.Size = UDim2.new(0, 0, 0, 20)
@@ -114,7 +111,6 @@ function Library:CreateWindow(title, wmText)
         end
     end)
 
-    -- Keybind List
     local KeybindListBG = Instance.new("Frame")
     KeybindListBG.Size = UDim2.new(0, 200, 0, 20)
     KeybindListBG.Position = UDim2.new(0, 15, 0.4, 0)
@@ -175,7 +171,6 @@ function Library:CreateWindow(title, wmText)
         activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(130, 130, 130)
     end
 
-    -- Main Menu Frame
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 520, 0, 480)
     MainFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
@@ -618,7 +613,6 @@ function Library:CreateWindow(title, wmText)
 
                 local isDragging = false
                 
-                -- FIXED MOBILE SLIDER LOGIC
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
@@ -790,6 +784,7 @@ function Library:CreateWindow(title, wmText)
                 return DropData
             end
 
+            -- ==================== COLOR PICKER (WITH NATIVE RAINBOW) ====================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
                 local defaultColor = options.Default or Color3.fromRGB(255, 255, 255)
@@ -821,7 +816,7 @@ function Library:CreateWindow(title, wmText)
                 Instance.new("UIStroke", ColorDisplay).Color = Library.Theme.Border
 
                 local Popup = Instance.new("Frame")
-                Popup.Size = UDim2.new(1, 0, 0, 180)
+                Popup.Size = UDim2.new(1, 0, 0, 205) -- Made slightly taller for Rainbow Button
                 Popup.Position = UDim2.new(0, 0, 1, 5)
                 Popup.BackgroundColor3 = Library.Theme.ItemBG
                 Popup.BorderSizePixel = 0
@@ -851,7 +846,7 @@ function Library:CreateWindow(title, wmText)
                 local currentHSV = {Color3.toHSV(defaultColor)}
 
                 local SatValGrid = Instance.new("ImageButton")
-                SatValGrid.Size = UDim2.new(1, 0, 1, -25)
+                SatValGrid.Size = UDim2.new(1, 0, 1, -45)
                 SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
                 SatValGrid.Image = "rbxassetid://4155801252"
                 SatValGrid.AutoButtonColor = false
@@ -896,6 +891,19 @@ function Library:CreateWindow(title, wmText)
                 HueIndicator.Parent = HueBar
                 Instance.new("UIStroke", HueIndicator).Color = Color3.fromRGB(0, 0, 0)
 
+                -- ADDED: Rainbow Toggle Button
+                local RainbowBtn = Instance.new("TextButton")
+                RainbowBtn.Size = UDim2.new(1, 0, 0, 15)
+                RainbowBtn.BackgroundColor3 = Library.Theme.DarkBG
+                RainbowBtn.BorderSizePixel = 0
+                RainbowBtn.Text = "Rainbow: OFF"
+                RainbowBtn.TextColor3 = Library.Theme.Text
+                RainbowBtn.Font = Enum.Font.Code
+                RainbowBtn.TextSize = 11
+                RainbowBtn.ZIndex = 81
+                RainbowBtn.Parent = Popup
+                Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
+
                 local function SetColor()
                     local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
@@ -923,8 +931,26 @@ function Library:CreateWindow(title, wmText)
 
                 local isSatValDragging = false
                 local isHueDragging = false
+                local rainbowConnection = nil
+
+                RainbowBtn.Activated:Connect(function()
+                    if rainbowConnection then
+                        rainbowConnection:Disconnect()
+                        rainbowConnection = nil
+                        RainbowBtn.Text = "Rainbow: OFF"
+                        RainbowBtn.TextColor3 = Library.Theme.Text
+                    else
+                        RainbowBtn.Text = "Rainbow: ON"
+                        RainbowBtn.TextColor3 = Library.Theme.Accent
+                        rainbowConnection = RunService.RenderStepped:Connect(function()
+                            currentHSV[1] = (tick() * 0.2) % 1 -- Speed of rainbow
+                            SetColor()
+                        end)
+                    end
+                end)
 
                 local function UpdateSatVal(input)
+                    if rainbowConnection then return end -- Disable manual edit if rainbow is on
                     local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
                     local posX = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
@@ -940,6 +966,7 @@ function Library:CreateWindow(title, wmText)
                 end)
                 
                 local function UpdateHue(input)
+                    if rainbowConnection then return end
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
@@ -1028,10 +1055,11 @@ function Library:CreateWindow(title, wmText)
 end
 
 -- ==============================================================================
--- CONFIG SYSTEM SAFE INJECTION
+-- CONFIG SYSTEM (WITH AUTOLOAD)
 -- ==============================================================================
 Library.ConfigManager = {}
 Library.ConfigManager.Folder = "BymaxUI_Configs"
+Library.ConfigManager.AutoFile = "BymaxUI_Configs/Autoload.txt"
 Library.ConfigManager.Ignore = {}
 
 function Library.ConfigManager:Init()
@@ -1102,6 +1130,20 @@ function Library.ConfigManager:Delete(configName)
     pcall(delfile, path)
 end
 
+function Library.ConfigManager:SetAutoload(configName)
+    if not self:Init() then return end
+    pcall(function() writefile(self.AutoFile, configName) end)
+end
+
+function Library.ConfigManager:DoAutoload()
+    if not self:Init() then return end
+    local s, content = pcall(readfile, self.AutoFile)
+    if s and content and content ~= "" then
+        print("[Bymax UI] Autoloading config:", content)
+        self:Load(content)
+    end
+end
+
 function Library.ConfigManager:BuildConfigSection(targetTab)
     if not self:Init() then return end
     
@@ -1148,6 +1190,13 @@ function Library.ConfigManager:BuildConfigSection(targetTab)
                 configDropdown:Set("...")
                 selectedConfig = ""
             end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Set as Autoload",
+        Callback = function()
+            if selectedConfig ~= "" then self:SetAutoload(selectedConfig) end
         end
     })
 
