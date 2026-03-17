@@ -1,6 +1,4 @@
--- ==============================================================================
--- BYMAX UI LIBRARY - V15 (RAINBOW COLORPICKER & AUTOLOAD CONFIG)
--- ==============================================================================
+
 local Library = {
     Flags = {}, 
     Theme = {
@@ -784,7 +782,6 @@ function Library:CreateWindow(title, wmText)
                 return DropData
             end
 
-            -- ==================== COLOR PICKER (WITH NATIVE RAINBOW) ====================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
                 local defaultColor = options.Default or Color3.fromRGB(255, 255, 255)
@@ -816,7 +813,7 @@ function Library:CreateWindow(title, wmText)
                 Instance.new("UIStroke", ColorDisplay).Color = Library.Theme.Border
 
                 local Popup = Instance.new("Frame")
-                Popup.Size = UDim2.new(1, 0, 0, 205) -- Made slightly taller for Rainbow Button
+                Popup.Size = UDim2.new(1, 0, 0, 205)
                 Popup.Position = UDim2.new(0, 0, 1, 5)
                 Popup.BackgroundColor3 = Library.Theme.ItemBG
                 Popup.BorderSizePixel = 0
@@ -891,7 +888,6 @@ function Library:CreateWindow(title, wmText)
                 HueIndicator.Parent = HueBar
                 Instance.new("UIStroke", HueIndicator).Color = Color3.fromRGB(0, 0, 0)
 
-                -- ADDED: Rainbow Toggle Button
                 local RainbowBtn = Instance.new("TextButton")
                 RainbowBtn.Size = UDim2.new(1, 0, 0, 15)
                 RainbowBtn.BackgroundColor3 = Library.Theme.DarkBG
@@ -943,14 +939,14 @@ function Library:CreateWindow(title, wmText)
                         RainbowBtn.Text = "Rainbow: ON"
                         RainbowBtn.TextColor3 = Library.Theme.Accent
                         rainbowConnection = RunService.RenderStepped:Connect(function()
-                            currentHSV[1] = (tick() * 0.2) % 1 -- Speed of rainbow
+                            currentHSV[1] = (tick() * 0.2) % 1 
                             SetColor()
                         end)
                     end
                 end)
 
                 local function UpdateSatVal(input)
-                    if rainbowConnection then return end -- Disable manual edit if rainbow is on
+                    if rainbowConnection then return end 
                     local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
                     local posX = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
@@ -1055,43 +1051,36 @@ function Library:CreateWindow(title, wmText)
 end
 
 -- ==============================================================================
--- CONFIG SYSTEM (WITH AUTOLOAD)
+-- CONFIG SYSTEM SAFE INJECTION
 -- ==============================================================================
 Library.ConfigManager = {}
 Library.ConfigManager.Folder = "BymaxUI_Configs"
 Library.ConfigManager.AutoFile = "BymaxUI_Configs/Autoload.txt"
-Library.ConfigManager.Ignore = {}
 
 function Library.ConfigManager:Init()
-    local s1, hasFs = pcall(function() return isfolder and makefolder and writefile and readfile end)
-    if not s1 or not hasFs then return false end
-    
-    local folderExists = false
-    pcall(function() folderExists = isfolder(self.Folder) end)
-    
-    if not folderExists then
-        local s2, err = pcall(function() makefolder(self.Folder) end)
-        if not s2 then return false end
-    end
-    return true
+    pcall(function()
+        if not isfolder(self.Folder) then
+            makefolder(self.Folder)
+        end
+    end)
 end
 
 function Library.ConfigManager:GetConfigs()
     local list = {}
-    if self:Init() then
-        local s, files = pcall(listfiles, self.Folder)
-        if s and files then
-            for _, file in ipairs(files) do
-                local fileName = file:match("([^/\\]+)%.json$")
-                if fileName then table.insert(list, fileName) end
-            end
+    self:Init()
+    local s, files = pcall(function() return listfiles(self.Folder) end)
+    if s and files then
+        for _, file in ipairs(files) do
+            local fileName = file:match("([^/\\]+)%.json$")
+            if fileName then table.insert(list, fileName) end
         end
     end
     return list
 end
 
 function Library.ConfigManager:Save(configName)
-    if not configName or configName == "" or not self:Init() then return end
+    if not configName or configName == "" then return end
+    self:Init()
     local data = {}
     for flag, element in pairs(Library.Flags) do
         local val = element.Value
@@ -1105,7 +1094,8 @@ function Library.ConfigManager:Save(configName)
 end
 
 function Library.ConfigManager:Load(configName)
-    if not configName or configName == "" or not self:Init() then return end
+    if not configName or configName == "" then return end
+    self:Init()
     local path = self.Folder .. "/" .. configName .. ".json"
     
     local s1, fileContent = pcall(function() return readfile(path) end)
@@ -1125,27 +1115,27 @@ function Library.ConfigManager:Load(configName)
 end
 
 function Library.ConfigManager:Delete(configName)
-    if not configName or configName == "" or not self:Init() then return end
+    if not configName or configName == "" then return end
+    self:Init()
     local path = self.Folder .. "/" .. configName .. ".json"
-    pcall(delfile, path)
+    pcall(function() delfile(path) end)
 end
 
 function Library.ConfigManager:SetAutoload(configName)
-    if not self:Init() then return end
+    self:Init()
     pcall(function() writefile(self.AutoFile, configName) end)
 end
 
 function Library.ConfigManager:DoAutoload()
-    if not self:Init() then return end
-    local s, content = pcall(readfile, self.AutoFile)
+    self:Init()
+    local s, content = pcall(function() return readfile(self.AutoFile) end)
     if s and content and content ~= "" then
-        print("[Bymax UI] Autoloading config:", content)
         self:Load(content)
     end
 end
 
 function Library.ConfigManager:BuildConfigSection(targetTab)
-    if not self:Init() then return end
+    self:Init() 
     
     local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
     local configNameBox = ""
