@@ -1,8 +1,8 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - PURE EDITION (NO CONFIG, NO CRASHES, JUST RAW UI)
+-- BYMAX UI LIBRARY - PURE EDITION V2 (TITLE FIX & ACCESSIBLE UI ELEMENTS)
 -- ==============================================================================
 local Library = {
-    Flags = {}, -- Stores current session values only (no saving)
+    Flags = {}, 
     Theme = {
         MainBG = Color3.fromRGB(25, 25, 25),
         Border = Color3.fromRGB(45, 45, 45),
@@ -10,7 +10,10 @@ local Library = {
         Text = Color3.fromRGB(210, 210, 210),
         DarkBG = Color3.fromRGB(20, 20, 20),
         ItemBG = Color3.fromRGB(30, 30, 30)
-    }
+    },
+    -- These are added so we can toggle them from outside
+    Watermark = nil,
+    KeybindList = nil
 }
 
 local Players = game:GetService("Players")
@@ -176,6 +179,7 @@ function Library:CreateWindow(title, wmText)
     WatermarkBG.Active = true
     WatermarkBG.Draggable = true
     WatermarkBG.Parent = ScreenGui
+    Library.Watermark = WatermarkBG -- Export for toggling
     Instance.new("UIStroke", WatermarkBG).Color = Library.Theme.Border
 
     local WMTopLine = Instance.new("Frame")
@@ -220,6 +224,7 @@ function Library:CreateWindow(title, wmText)
     KeybindListBG.Draggable = true
     KeybindListBG.Visible = not isMobile 
     KeybindListBG.Parent = ScreenGui
+    Library.KeybindList = KeybindListBG -- Export for toggling
     Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
 
     local KLTopLine = Instance.new("Frame")
@@ -417,9 +422,12 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.ZIndex = 1 
             GBBlueLine.Parent = GroupBox
             
+            -- ========================================================
+            -- TITLE FIX: Position centered exactly on the blue line
+            -- ========================================================
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 10, 0, -8) 
-            TitleContainer.Size = UDim2.new(0, 0, 0, 16) 
+            TitleContainer.Position = UDim2.new(0, 12, 0, -7) -- Adjusted to sit perfectly
+            TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
             TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
             TitleContainer.BorderSizePixel = 0
@@ -434,7 +442,6 @@ function Library:CreateWindow(title, wmText)
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
-            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -821,6 +828,12 @@ function Library:CreateWindow(title, wmText)
                             pcall(callback, optionText)
                         end)
                     end
+                end
+
+                function DropData:Set(newValue)
+                    if flag then Library.Flags[flag].Value = newValue end
+                    MainBtn.Text = " " .. tostring(newValue)
+                    pcall(callback, newValue)
                 end
 
                 DropData:Refresh(list)
