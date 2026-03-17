@@ -1,6 +1,4 @@
--- ==============================================================================
--- BYMAX UI LIBRARY - V28 (PREMIUM TAB DESIGN & PERFECT TITLE ALIGNMENT)
--- ==============================================================================
+-- i finished released good use
 local Library = {
     Flags = {}, 
     Theme = {
