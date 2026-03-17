@@ -104,7 +104,3 @@ I have provided a comprehensive example script that showcases every single featu
 | `Library.KeybindList.Visible = false` | Controls the visibility of the active keybinds widget. |
 
 ---
-
-
-
-Kral, bu şekilde hem ekran görüntün görünecek hem de "Full Example Script" kısmına basan adam direkt senin `example.lua` dosyana gidecek. Her şey tam istediğin gibi jilet gibi duruyor. İyi uykular!
