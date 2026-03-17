@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V27 (COMPACT PADDING, HOLD-TO-TOGGLE, NEW KEYBIND LIST)
+-- BYMAX UI LIBRARY - V28 (PREMIUM TAB DESIGN & PERFECT TITLE ALIGNMENT)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -211,9 +211,6 @@ function Library:CreateWindow(title, wmText)
         end
     end)
 
-    -- ========================================================
-    -- BEAUTIFIED KEYBIND LIST
-    -- ========================================================
     local KeybindListBG = Instance.new("Frame")
     KeybindListBG.Size = UDim2.new(0, 200, 0, 0)
     KeybindListBG.Position = UDim2.new(0, 15, 0.4, 0)
@@ -228,7 +225,7 @@ function Library:CreateWindow(title, wmText)
     Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
 
     local KLTopLine = Instance.new("Frame")
-    KLTopLine.Size = UDim2.new(1, 0, 0, 2) -- Kalın üst çizgi
+    KLTopLine.Size = UDim2.new(1, 0, 0, 2)
     KLTopLine.BackgroundColor3 = Library.Theme.Accent
     KLTopLine.BorderSizePixel = 0
     KLTopLine.Parent = KeybindListBG
@@ -284,7 +281,6 @@ function Library:CreateWindow(title, wmText)
             activeKeybinds[name] = item
         end
         activeKeybinds[name].Text = string.format("[%s] %s", key, name)
-        -- Glow effect on accent color when active
         activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(110, 110, 110)
     end
 
@@ -335,7 +331,7 @@ function Library:CreateWindow(title, wmText)
     local TabLayout = Instance.new("UIListLayout")
     TabLayout.FillDirection = Enum.FillDirection.Horizontal
     TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabLayout.Padding = UDim.new(0, 10)
+    TabLayout.Padding = UDim.new(0, 15) -- Slightly spaced out
     TabLayout.Parent = TabBar
 
     local ContentArea = Instance.new("Frame")
@@ -349,6 +345,9 @@ function Library:CreateWindow(title, wmText)
     function WindowData:CreateTab(tabName)
         local TabData = {}
         
+        -- ========================================================
+        -- THE FIX: PREMIUM TAB DESIGN
+        -- ========================================================
         local TabBtn = Instance.new("TextButton")
         TabBtn.Size = UDim2.new(0, 0, 1, 0)
         TabBtn.AutomaticSize = Enum.AutomaticSize.X
@@ -359,6 +358,15 @@ function Library:CreateWindow(title, wmText)
         TabBtn.TextSize = 13
         TabBtn.Parent = TabBar
 
+        -- Active tab accent line indicator
+        local TabIndicator = Instance.new("Frame")
+        TabIndicator.Size = UDim2.new(1, 0, 0, 2)
+        TabIndicator.Position = UDim2.new(0, 0, 1, -2)
+        TabIndicator.BackgroundColor3 = Library.Theme.Accent
+        TabIndicator.BorderSizePixel = 0
+        TabIndicator.Visible = (#self.Tabs == 0)
+        TabIndicator.Parent = TabBtn
+
         local Page = Instance.new("ScrollingFrame")
         Page.Size = UDim2.new(1, -10, 1, -10)
         Page.Position = UDim2.new(0, 5, 0, 5)
@@ -368,47 +376,47 @@ function Library:CreateWindow(title, wmText)
         Page.Visible = (#self.Tabs == 0)
         Page.Parent = ContentArea
 
-        -- ========================================================
-        -- PADDING COMPACT FIX: Tighter top gaps
-        -- ========================================================
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        LeftColumn.Position = UDim2.new(0.01, 0, 0, 8) -- Pushed up
+        LeftColumn.Position = UDim2.new(0.01, 0, 0, 10) 
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
         local LeftLayout = Instance.new("UIListLayout")
         LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        LeftLayout.Padding = UDim.new(0, 10)
+        LeftLayout.Padding = UDim.new(0, 12)
         LeftLayout.Parent = LeftColumn
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 8) -- Pushed up
+        RightColumn.Position = UDim2.new(0.51, 0, 0, 10) 
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
         local RightLayout = Instance.new("UIListLayout")
         RightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        RightLayout.Padding = UDim.new(0, 10)
+        RightLayout.Padding = UDim.new(0, 12)
         RightLayout.Parent = RightColumn
 
         local function UpdateCanvas()
             local maxY = math.max(LeftLayout.AbsoluteContentSize.Y, RightLayout.AbsoluteContentSize.Y)
-            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 20)
+            Page.CanvasSize = UDim2.new(0, 0, 0, maxY + 30)
         end
         LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
         RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
 
-        table.insert(self.Tabs, {Btn = TabBtn, Page = Page})
+        table.insert(self.Tabs, {Btn = TabBtn, Indicator = TabIndicator, Page = Page})
 
+        -- Tab Selection Logic
         TabBtn.MouseButton1Click:Connect(function()
             for _, t in pairs(self.Tabs) do
                 t.Page.Visible = false
                 t.Btn.TextColor3 = Color3.fromRGB(130, 130, 130)
+                t.Indicator.Visible = false
             end
             Page.Visible = true
             TabBtn.TextColor3 = Library.Theme.Text
+            TabIndicator.Visible = true
         end)
 
         function TabData:CreateGroupbox(gbName, side)
@@ -421,7 +429,6 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
-            -- Left Blue Line
             local GBLineL = Instance.new("Frame")
             GBLineL.Size = UDim2.new(0, 10, 0, 1) 
             GBLineL.BackgroundColor3 = Library.Theme.Accent
@@ -429,8 +436,11 @@ function Library:CreateWindow(title, wmText)
             GBLineL.ZIndex = 2
             GBLineL.Parent = GroupBox
             
+            -- ========================================================
+            -- TITLE FIX: PERFECT ALIGNMENT (-9 OFFSET)
+            -- ========================================================
             local TitleCont = Instance.new("Frame")
-            TitleCont.Position = UDim2.new(0, 14, 0, -7) 
+            TitleCont.Position = UDim2.new(0, 14, 0, -9) -- MOVED UP BY 2 PIXELS FOR PERFECT CENTER
             TitleCont.Size = UDim2.new(0, 0, 0, 14) 
             TitleCont.AutomaticSize = Enum.AutomaticSize.X 
             TitleCont.BackgroundTransparency = 1
@@ -466,12 +476,9 @@ function Library:CreateWindow(title, wmText)
             TitleCont:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateTitleLines)
             task.spawn(function() RunService.RenderStepped:Wait() UpdateTitleLines() end)
 
-            -- ========================================================
-            -- ITEM CONTAINER: Tighter spacing
-            -- ========================================================
             local ItemContainer = Instance.new("Frame")
             ItemContainer.Size = UDim2.new(1, 0, 0, 0)
-            ItemContainer.Position = UDim2.new(0, 0, 0, 8) -- Pushed up
+            ItemContainer.Position = UDim2.new(0, 0, 0, 8) 
             ItemContainer.BackgroundTransparency = 1
             ItemContainer.AutomaticSize = Enum.AutomaticSize.Y
             ItemContainer.Parent = GroupBox
@@ -483,7 +490,7 @@ function Library:CreateWindow(title, wmText)
             Padding.PaddingLeft = UDim.new(0, 10)
             Padding.PaddingRight = UDim.new(0, 10)
             Padding.PaddingBottom = UDim.new(0, 10)
-            Padding.PaddingTop = UDim.new(0, 4) -- Tighter top padding
+            Padding.PaddingTop = UDim.new(0, 4)
 
             function GBData:CreateLabel(text)
                 local Lbl = Instance.new("TextLabel")
@@ -561,14 +568,11 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
-            -- ========================================================
-            -- THE FIX: ADDED HOLD OPTION TO TOGGLES
-            -- ========================================================
             function GBData:CreateToggle(options)
                 local name = options.Name or "Toggle"
                 local state = options.Default or false
                 local bind = options.Keybind 
-                local isHold = options.Hold or false -- Hold Logic
+                local isHold = options.Hold or false
                 local flag = options.Flag
                 local callback = options.Callback or function() end
 
@@ -620,7 +624,6 @@ function Library:CreateWindow(title, wmText)
                 if state then pcall(callback, state) end
 
                 MainBtn.Activated:Connect(function()
-                    -- If it's a hold toggle, clicking it shouldn't work normally, but let's allow manual toggle
                     Fire()
                 end)
 
@@ -655,18 +658,17 @@ function Library:CreateWindow(title, wmText)
                             isListening = false
                         elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
                             if isHold then
-                                Fire(true) -- Turn ON when held
+                                Fire(true)
                             else
-                                Fire() -- Normal toggle
+                                Fire()
                             end
                         end
                     end)
 
-                    -- Hold release logic
                     UIS.InputEnded:Connect(function(input, gameProcessed)
                         if not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
                             if isHold then
-                                Fire(false) -- Turn OFF when released
+                                Fire(false)
                             end
                         end
                     end)
@@ -1084,6 +1086,60 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging then UpdateSatVal(input)
                         elseif isHueDragging then UpdateHue(input) end
+                    end
+                end)
+            end
+
+            function GBData:CreateKeybind(options)
+                local name = options.Name or "Keybind"
+                local bind = options.Default
+                local callback = options.Callback or function() end
+
+                local BContainer = Instance.new("Frame")
+                BContainer.Size = UDim2.new(1, 0, 0, 14)
+                BContainer.BackgroundTransparency = 1
+                BContainer.Parent = ItemContainer
+
+                local Lbl = Instance.new("TextLabel")
+                Lbl.Size = UDim2.new(1, -40, 1, 0)
+                Lbl.BackgroundTransparency = 1
+                Lbl.Text = name
+                Lbl.TextColor3 = Library.Theme.Text
+                Lbl.Font = Enum.Font.Code
+                Lbl.TextSize = 12
+                Lbl.TextXAlignment = Enum.TextXAlignment.Left
+                Lbl.Parent = BContainer
+
+                local BindBtn = Instance.new("TextButton")
+                BindBtn.Size = UDim2.new(0, 40, 1, 0)
+                BindBtn.Position = UDim2.new(1, -40, 0, 0)
+                BindBtn.BackgroundTransparency = 1
+                BindBtn.Text = bind and "["..bind.."]" or "[None]"
+                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BindBtn.Font = Enum.Font.Code
+                BindBtn.TextSize = 11
+                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
+                BindBtn.Parent = BContainer
+
+                local isListening = false
+                BindBtn.Activated:Connect(function()
+                    BindBtn.Text = "[...]"
+                    isListening = true
+                end)
+
+                UIS.InputBegan:Connect(function(input, gameProcessed)
+                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
+                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
+                            bind = nil
+                            BindBtn.Text = "[None]"
+                        else
+                            bind = input.KeyCode.Name
+                            BindBtn.Text = "[" .. bind .. "]"
+                            pcall(callback, bind)
+                        end
+                        isListening = false
+                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
+                        pcall(callback, bind)
                     end
                 end)
             end
