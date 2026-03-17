@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - FINAL RELEASE (PERFECT ALIGNMENT & OPTIMIZATION)
+-- BYMAX UI LIBRARY - FINAL PURE EDITION (PERFECT SECTION TITLE & FULL API)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -358,7 +358,7 @@ function Library:CreateWindow(title, wmText)
 
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        LeftColumn.Position = UDim2.new(0.01, 0, 0, 7) 
+        LeftColumn.Position = UDim2.new(0.01, 0, 0, 10) 
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
@@ -369,7 +369,7 @@ function Library:CreateWindow(title, wmText)
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.48, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 7) 
+        RightColumn.Position = UDim2.new(0.51, 0, 0, 10) 
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
@@ -414,10 +414,10 @@ function Library:CreateWindow(title, wmText)
             GBLineL.Parent = GroupBox
             
             -- ========================================================
-            -- PERFECT TITLE ALIGNMENT (-2 offset) & TEXT OVERFLOW
+            -- TITLE FIX: PERFECT ALIGNMENT (-7 offset) & OVERFLOW FIX
             -- ========================================================
             local TitleCont = Instance.new("Frame")
-            TitleCont.Position = UDim2.new(0, 12, 0, -2) -- THE PERFECT ALIGNMENT YOU ASKED FOR
+            TitleCont.Position = UDim2.new(0, 12, 0, -7) -- THE PERFECT CENTER POSITION
             TitleCont.Size = UDim2.new(0, 0, 0, 14) 
             TitleCont.AutomaticSize = Enum.AutomaticSize.X 
             TitleCont.BackgroundTransparency = 1
@@ -431,7 +431,7 @@ function Library:CreateWindow(title, wmText)
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = cleanName
+            GBTitle.Text = " " .. cleanName .. " "
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
@@ -1042,6 +1042,60 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging then UpdateSatVal(input)
                         elseif isHueDragging then UpdateHue(input) end
+                    end
+                end)
+            end
+
+            function GBData:CreateKeybind(options)
+                local name = options.Name or "Keybind"
+                local bind = options.Default
+                local callback = options.Callback or function() end
+
+                local BContainer = Instance.new("Frame")
+                BContainer.Size = UDim2.new(1, 0, 0, 14)
+                BContainer.BackgroundTransparency = 1
+                BContainer.Parent = ItemContainer
+
+                local Lbl = Instance.new("TextLabel")
+                Lbl.Size = UDim2.new(1, -40, 1, 0)
+                Lbl.BackgroundTransparency = 1
+                Lbl.Text = name
+                Lbl.TextColor3 = Library.Theme.Text
+                Lbl.Font = Enum.Font.Code
+                Lbl.TextSize = 12
+                Lbl.TextXAlignment = Enum.TextXAlignment.Left
+                Lbl.Parent = BContainer
+
+                local BindBtn = Instance.new("TextButton")
+                BindBtn.Size = UDim2.new(0, 40, 1, 0)
+                BindBtn.Position = UDim2.new(1, -40, 0, 0)
+                BindBtn.BackgroundTransparency = 1
+                BindBtn.Text = bind and "["..bind.."]" or "[None]"
+                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+                BindBtn.Font = Enum.Font.Code
+                BindBtn.TextSize = 11
+                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
+                BindBtn.Parent = BContainer
+
+                local isListening = false
+                BindBtn.Activated:Connect(function()
+                    BindBtn.Text = "[...]"
+                    isListening = true
+                end)
+
+                UIS.InputBegan:Connect(function(input, gameProcessed)
+                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
+                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
+                            bind = nil
+                            BindBtn.Text = "[None]"
+                        else
+                            bind = input.KeyCode.Name
+                            BindBtn.Text = "[" .. bind .. "]"
+                            pcall(callback, bind)
+                        end
+                        isListening = false
+                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
+                        pcall(callback, bind)
                     end
                 end)
             end
