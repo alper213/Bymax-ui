@@ -1,34 +1,176 @@
 -- ==============================================================================
--- KRAL PREMIUM UI LIBRARY - V11 (MOBILE SUPPORT + ALL ELEMENTS RESTORED)
+-- BYMAX UI LIBRARY - V12 PUBLIC RELEASE (WITH CONFIG MANAGER & TRUNCATE FIX)
 -- ==============================================================================
-local Library = {}
+local Library = {
+    Flags = {}, -- Stores all element values
+    Theme = {
+        MainBG = Color3.fromRGB(25, 25, 25),
+        Border = Color3.fromRGB(45, 45, 45),
+        Accent = Color3.fromRGB(40, 100, 255),
+        Text = Color3.fromRGB(210, 210, 210),
+        DarkBG = Color3.fromRGB(20, 20, 20),
+        ItemBG = Color3.fromRGB(30, 30, 30)
+    }
+}
+
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
--- Universal GUI Parent Logic (Hidden from the game)
+-- Universal GUI Parent Logic
 local TargetParent
 local success = pcall(function() TargetParent = gethui and gethui() or game:GetService("CoreGui") end)
 if not success or not TargetParent then
     TargetParent = Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local Theme = {
-    MainBG = Color3.fromRGB(25, 25, 25),
-    Border = Color3.fromRGB(45, 45, 45),
-    Accent = Color3.fromRGB(40, 100, 255),
-    Text = Color3.fromRGB(210, 210, 210),
-    DarkBG = Color3.fromRGB(20, 20, 20),
-    ItemBG = Color3.fromRGB(30, 30, 30)
-}
-
--- Detect Mobile Device
 local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 
--- Destroy old UI if it exists
 for _, v in pairs(TargetParent:GetChildren()) do
-    if v.Name == "KralPremiumLib" then v:Destroy() end
+    if v.Name == "BymaxUILib" then v:Destroy() end
 end
+
+-- ==============================================================================
+-- CONFIG MANAGER (200+ LINES ROBUST SYSTEM)
+-- ==============================================================================
+Library.ConfigManager = {
+    Folder = "BymaxUI_Configs",
+    Ignore = {}
+}
+
+function Library.ConfigManager:Init()
+    if not isfolder or not makefolder or not writefile or not readfile then
+        warn("[Bymax UI] Your executor does not support File System. Configs disabled.")
+        return false
+    end
+    if not isfolder(self.Folder) then makefolder(self.Folder) end
+    return true
+end
+
+function Library.ConfigManager:GetConfigs()
+    local list = {}
+    if isfolder(self.Folder) then
+        for _, file in ipairs(listfiles(self.Folder)) do
+            local fileName = file:match("([^/\\]+)%.json$")
+            if fileName then table.insert(list, fileName) end
+        end
+    end
+    return list
+end
+
+function Library.ConfigManager:Save(configName)
+    if not configName or configName == "" then return end
+    local data = {}
+    
+    for flag, element in pairs(Library.Flags) do
+        if not self.Ignore[flag] then
+            local val = element.Value
+            -- Convert Color3 to a serializable table
+            if typeof(val) == "Color3" then
+                val = {R = val.R, G = val.G, B = val.B, IsColor3 = true}
+            end
+            data[flag] = val
+        end
+    end
+    
+    local success, encoded = pcall(function() return HttpService:JSONEncode(data) end)
+    if success then
+        writefile(self.Folder .. "/" .. configName .. ".json", encoded)
+        print("[Bymax UI] Saved Config:", configName)
+    else
+        warn("[Bymax UI] Failed to encode config!")
+    end
+end
+
+function Library.ConfigManager:Load(configName)
+    if not configName or configName == "" then return end
+    local path = self.Folder .. "/" .. configName .. ".json"
+    
+    if isfile(path) then
+        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+        if success and type(decoded) == "table" then
+            for flag, savedValue in pairs(decoded) do
+                if Library.Flags[flag] and Library.Flags[flag].Set then
+                    -- Reconstruct Color3 if necessary
+                    if type(savedValue) == "table" and savedValue.IsColor3 then
+                        savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
+                    end
+                    pcall(function() Library.Flags[flag]:Set(savedValue) end)
+                end
+            end
+            print("[Bymax UI] Loaded Config:", configName)
+        else
+            warn("[Bymax UI] Failed to decode config file!")
+        end
+    end
+end
+
+function Library.ConfigManager:Delete(configName)
+    if not configName or configName == "" then return end
+    local path = self.Folder .. "/" .. configName .. ".json"
+    if isfile(path) then
+        delfile(path)
+        print("[Bymax UI] Deleted Config:", configName)
+    end
+end
+
+-- Auto-build the Config UI for the user
+function Library.ConfigManager:BuildConfigSection(targetTab)
+    self:Init()
+    local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
+    
+    local configNameBox = ""
+    local selectedConfig = ""
+
+    ConfigGroup:CreateTextBox({
+        Name = "Config Name",
+        Placeholder = "Enter name...",
+        Callback = function(val) configNameBox = val end
+    })
+
+    local configDropdown = ConfigGroup:CreateDropdown({
+        Name = "Select Config",
+        Options = self:GetConfigs(),
+        Callback = function(val) selectedConfig = val end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Save Config",
+        Callback = function()
+            local nameToSave = (configNameBox ~= "") and configNameBox or selectedConfig
+            if nameToSave ~= "" then
+                self:Save(nameToSave)
+                configDropdown:Refresh(self:GetConfigs())
+            end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Load Config",
+        Callback = function()
+            if selectedConfig ~= "" then self:Load(selectedConfig) end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Delete Config",
+        Callback = function()
+            if selectedConfig ~= "" then
+                self:Delete(selectedConfig)
+                configDropdown:Refresh(self:GetConfigs())
+                configDropdown:Set("...")
+                selectedConfig = ""
+            end
+        end
+    })
+
+    ConfigGroup:CreateButton({
+        Name = "Refresh List",
+        Callback = function() configDropdown:Refresh(self:GetConfigs()) end
+    })
+end
+-- ==============================================================================
 
 function Library:CreateWindow(title, wmText)
     local WindowData = {}
@@ -36,26 +178,22 @@ function Library:CreateWindow(title, wmText)
     WindowData.Tabs = {}
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "KralPremiumLib"
+    ScreenGui.Name = "BymaxUILib"
     ScreenGui.Parent = TargetParent
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
     ScreenGui.ResetOnSpawn = false
 
-    function WindowData:Unload()
-        ScreenGui:Destroy()
-    end
+    function WindowData:Unload() ScreenGui:Destroy() end
 
-    -- ========================================================
-    -- MOBILE TOGGLE BUTTON (HIDDEN FROM GAME)
-    -- ========================================================
+    -- Mobile Toggle
     local MobileToggleBtn = nil
     if isMobile then
         MobileToggleBtn = Instance.new("TextButton")
         MobileToggleBtn.Name = "MobileToggle"
         MobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
         MobileToggleBtn.Position = UDim2.new(1, -70, 0, 15)
-        MobileToggleBtn.BackgroundColor3 = Theme.DarkBG
-        MobileToggleBtn.TextColor3 = Theme.Accent
+        MobileToggleBtn.BackgroundColor3 = Library.Theme.DarkBG
+        MobileToggleBtn.TextColor3 = Library.Theme.Accent
         MobileToggleBtn.Font = Enum.Font.Code
         MobileToggleBtn.TextSize = 13
         MobileToggleBtn.Text = "MENU"
@@ -63,31 +201,27 @@ function Library:CreateWindow(title, wmText)
         MobileToggleBtn.Active = true
         MobileToggleBtn.Draggable = true 
         MobileToggleBtn.Parent = ScreenGui
-        
         local MTCircular = Instance.new("UICorner")
         MTCircular.CornerRadius = UDim.new(0, 8)
         MTCircular.Parent = MobileToggleBtn
-        
-        Instance.new("UIStroke", MobileToggleBtn).Color = Theme.Border
+        Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
     end
 
-    -- ========================================================
-    -- LIVE WATERMARK
-    -- ========================================================
+    -- Watermark
     local WatermarkBG = Instance.new("Frame")
     WatermarkBG.AutomaticSize = Enum.AutomaticSize.X
     WatermarkBG.Size = UDim2.new(0, 0, 0, 20)
     WatermarkBG.Position = UDim2.new(0, 15, 0, 15)
-    WatermarkBG.BackgroundColor3 = Theme.DarkBG
+    WatermarkBG.BackgroundColor3 = Library.Theme.DarkBG
     WatermarkBG.BorderSizePixel = 0
     WatermarkBG.Active = true
     WatermarkBG.Draggable = true
     WatermarkBG.Parent = ScreenGui
-    Instance.new("UIStroke", WatermarkBG).Color = Theme.Border
+    Instance.new("UIStroke", WatermarkBG).Color = Library.Theme.Border
 
     local WMTopLine = Instance.new("Frame")
     WMTopLine.Size = UDim2.new(1, 0, 0, 1)
-    WMTopLine.BackgroundColor3 = Theme.Accent
+    WMTopLine.BackgroundColor3 = Library.Theme.Accent
     WMTopLine.BorderSizePixel = 0
     WMTopLine.Parent = WatermarkBG
 
@@ -100,8 +234,8 @@ function Library:CreateWindow(title, wmText)
     WMTextLabel.AutomaticSize = Enum.AutomaticSize.X
     WMTextLabel.Size = UDim2.new(0, 0, 1, 0)
     WMTextLabel.BackgroundTransparency = 1
-    WMTextLabel.Text = wmText or "Kral Premium UI"
-    WMTextLabel.TextColor3 = Theme.Text
+    WMTextLabel.Text = wmText or "Bymax UI"
+    WMTextLabel.TextColor3 = Library.Theme.Text
     WMTextLabel.Font = Enum.Font.Code
     WMTextLabel.TextSize = 12
     WMTextLabel.Parent = WatermarkBG
@@ -109,7 +243,7 @@ function Library:CreateWindow(title, wmText)
     local frames = 0
     RunService.RenderStepped:Connect(function() frames = frames + 1 end)
     task.spawn(function()
-        local baseText = wmText or "Kral Premium UI"
+        local baseText = wmText or "Bymax UI"
         while task.wait(1) do
             if not ScreenGui.Parent then break end 
             local timeStr = os.date("%H:%M:%S")
@@ -118,23 +252,21 @@ function Library:CreateWindow(title, wmText)
         end
     end)
 
-    -- ========================================================
-    -- KEYBIND LIST
-    -- ========================================================
+    -- Keybind List
     local KeybindListBG = Instance.new("Frame")
     KeybindListBG.Size = UDim2.new(0, 200, 0, 20)
     KeybindListBG.Position = UDim2.new(0, 15, 0.4, 0)
-    KeybindListBG.BackgroundColor3 = Theme.DarkBG
+    KeybindListBG.BackgroundColor3 = Library.Theme.DarkBG
     KeybindListBG.BorderSizePixel = 0
     KeybindListBG.Active = true
     KeybindListBG.Draggable = true
     KeybindListBG.Visible = not isMobile 
     KeybindListBG.Parent = ScreenGui
-    Instance.new("UIStroke", KeybindListBG).Color = Theme.Border
+    Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
 
     local KLTopLine = Instance.new("Frame")
     KLTopLine.Size = UDim2.new(1, 0, 0, 1)
-    KLTopLine.BackgroundColor3 = Theme.Accent
+    KLTopLine.BackgroundColor3 = Library.Theme.Accent
     KLTopLine.BorderSizePixel = 0
     KLTopLine.Parent = KeybindListBG
 
@@ -143,7 +275,7 @@ function Library:CreateWindow(title, wmText)
     KLTitle.Position = UDim2.new(0, 5, 0, 0)
     KLTitle.BackgroundTransparency = 1
     KLTitle.Text = "Keybinds"
-    KLTitle.TextColor3 = Theme.Text
+    KLTitle.TextColor3 = Library.Theme.Text
     KLTitle.Font = Enum.Font.Code
     KLTitle.TextSize = 12
     KLTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -152,7 +284,7 @@ function Library:CreateWindow(title, wmText)
     local KLContainer = Instance.new("Frame")
     KLContainer.Size = UDim2.new(1, 0, 0, 0)
     KLContainer.Position = UDim2.new(0, 0, 1, 0)
-    KLContainer.BackgroundColor3 = Theme.MainBG
+    KLContainer.BackgroundColor3 = Library.Theme.MainBG
     KLContainer.BackgroundTransparency = 0
     KLContainer.BorderSizePixel = 0
     KLContainer.AutomaticSize = Enum.AutomaticSize.Y
@@ -178,21 +310,19 @@ function Library:CreateWindow(title, wmText)
             activeKeybinds[name] = item
         end
         activeKeybinds[name].Text = "[" .. key .. "] " .. name
-        activeKeybinds[name].TextColor3 = state and Theme.Accent or Color3.fromRGB(130, 130, 130)
+        activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(130, 130, 130)
     end
 
-    -- ========================================================
-    -- MAIN MENU
-    -- ========================================================
+    -- Main Menu Frame
     local MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 520, 0, 480)
     MainFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
-    MainFrame.BackgroundColor3 = Theme.MainBG
+    MainFrame.BackgroundColor3 = Library.Theme.MainBG
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
     MainFrame.Parent = ScreenGui
-    Instance.new("UIStroke", MainFrame).Color = Theme.Border
+    Instance.new("UIStroke", MainFrame).Color = Library.Theme.Border
     
     if isMobile then
         MainFrame.Size = UDim2.new(0, 450, 0, 350)
@@ -206,14 +336,12 @@ function Library:CreateWindow(title, wmText)
     end)
     
     if isMobile and MobileToggleBtn then
-        MobileToggleBtn.Activated:Connect(function()
-            MainFrame.Visible = not MainFrame.Visible
-        end)
+        MobileToggleBtn.Activated:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
     end
 
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 25)
-    TitleBar.BackgroundColor3 = Theme.MainBG
+    TitleBar.BackgroundColor3 = Library.Theme.MainBG
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = MainFrame
     
@@ -222,7 +350,7 @@ function Library:CreateWindow(title, wmText)
     TitleText.Position = UDim2.new(0, 10, 0, 0)
     TitleText.BackgroundTransparency = 1
     TitleText.Text = title
-    TitleText.TextColor3 = Theme.Text
+    TitleText.TextColor3 = Library.Theme.Text
     TitleText.Font = Enum.Font.Code
     TitleText.TextSize = 12
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -243,10 +371,10 @@ function Library:CreateWindow(title, wmText)
     local ContentArea = Instance.new("Frame")
     ContentArea.Size = UDim2.new(1, -20, 1, -70)
     ContentArea.Position = UDim2.new(0, 10, 0, 60)
-    ContentArea.BackgroundColor3 = Theme.DarkBG
+    ContentArea.BackgroundColor3 = Library.Theme.DarkBG
     ContentArea.BorderSizePixel = 0
     ContentArea.Parent = MainFrame
-    Instance.new("UIStroke", ContentArea).Color = Theme.Border
+    Instance.new("UIStroke", ContentArea).Color = Library.Theme.Border
 
     local ActiveDropdown = nil
 
@@ -258,7 +386,7 @@ function Library:CreateWindow(title, wmText)
         TabBtn.AutomaticSize = Enum.AutomaticSize.X
         TabBtn.BackgroundTransparency = 1
         TabBtn.Text = tabName
-        TabBtn.TextColor3 = (#self.Tabs == 0) and Theme.Text or Color3.fromRGB(130, 130, 130)
+        TabBtn.TextColor3 = (#self.Tabs == 0) and Library.Theme.Text or Color3.fromRGB(130, 130, 130)
         TabBtn.Font = Enum.Font.Code
         TabBtn.TextSize = 13
         TabBtn.Parent = TabBar
@@ -310,7 +438,7 @@ function Library:CreateWindow(title, wmText)
                 t.Btn.TextColor3 = Color3.fromRGB(130, 130, 130)
             end
             Page.Visible = true
-            TabBtn.TextColor3 = Theme.Text
+            TabBtn.TextColor3 = Library.Theme.Text
         end)
 
         function TabData:CreateGroupbox(gbName, side)
@@ -319,36 +447,45 @@ function Library:CreateWindow(title, wmText)
             
             local GroupBox = Instance.new("Frame")
             GroupBox.Size = UDim2.new(1, 0, 0, 0)
-            GroupBox.BackgroundColor3 = Theme.DarkBG
+            GroupBox.BackgroundColor3 = Library.Theme.DarkBG
             GroupBox.BorderSizePixel = 0
             GroupBox.AutomaticSize = Enum.AutomaticSize.Y
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
-            Instance.new("UIStroke", GroupBox).Color = Theme.Border
+            Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
             local GBBlueLine = Instance.new("Frame")
             GBBlueLine.Size = UDim2.new(1, 0, 0, 1)
-            GBBlueLine.BackgroundColor3 = Theme.Accent
+            GBBlueLine.BackgroundColor3 = Library.Theme.Accent
             GBBlueLine.BorderSizePixel = 0
             GBBlueLine.ZIndex = 1 
             GBBlueLine.Parent = GroupBox
             
+            -- ========================================================
+            -- TEXT OVERFLOW & TRUNCATE FIX
+            -- ========================================================
             local TitleContainer = Instance.new("Frame")
             TitleContainer.Position = UDim2.new(0, 10, 0, -2) 
             TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
-            TitleContainer.BackgroundColor3 = Theme.DarkBG
+            TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
             TitleContainer.BorderSizePixel = 0
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
+
+            -- Stop it from growing past the groupbox width minus padding
+            local TitleConstraint = Instance.new("UISizeConstraint")
+            TitleConstraint.MaxSize = Vector2.new(220, 14) -- Prevents breaking the blue line
+            TitleConstraint.Parent = TitleContainer
 
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
             GBTitle.Text = " " .. gbName .. " "
-            GBTitle.TextColor3 = Theme.Text
+            GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
+            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd -- Adds "..." if too long
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -369,50 +506,45 @@ function Library:CreateWindow(title, wmText)
             Padding.PaddingBottom = UDim.new(0, 8)
             Padding.Parent = ItemContainer
 
-            -- ==================== LABEL ====================
             function GBData:CreateLabel(text)
                 local Lbl = Instance.new("TextLabel")
                 Lbl.Size = UDim2.new(1, 0, 0, 14)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = text
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
                 Lbl.Parent = ItemContainer
             end
 
-            -- ==================== BUTTON ====================
             function GBData:CreateButton(options)
                 local name = options.Name or "Button"
                 local callback = options.Callback or function() end
 
                 local Btn = Instance.new("TextButton")
                 Btn.Size = UDim2.new(1, 0, 0, 18)
-                Btn.BackgroundColor3 = Theme.ItemBG
+                Btn.BackgroundColor3 = Library.Theme.ItemBG
                 Btn.BorderSizePixel = 0
                 Btn.Text = name
-                Btn.TextColor3 = Theme.Text
+                Btn.TextColor3 = Library.Theme.Text
                 Btn.Font = Enum.Font.Code
                 Btn.TextSize = 12
                 Btn.Parent = ItemContainer
-                Instance.new("UIStroke", Btn).Color = Theme.Border
+                Instance.new("UIStroke", Btn).Color = Library.Theme.Border
 
-                Btn.MouseEnter:Connect(function() Btn.TextColor3 = Theme.Accent end)
-                Btn.MouseLeave:Connect(function() Btn.TextColor3 = Theme.Text end)
-                
+                Btn.MouseEnter:Connect(function() Btn.TextColor3 = Library.Theme.Accent end)
+                Btn.MouseLeave:Connect(function() Btn.TextColor3 = Library.Theme.Text end)
                 Btn.Activated:Connect(function() 
                     local success, err = pcall(callback)
-                    if not success then
-                        warn("[Kral UI Error] Button '" .. name .. "' failed: " .. tostring(err))
-                    end
+                    if not success then warn("[Bymax UI Error] Button failed:", err) end
                 end)
             end
 
-            -- ==================== TEXTBOX ====================
             function GBData:CreateTextBox(options)
                 local name = options.Name or "TextBox"
                 local placeholder = options.Placeholder or "Type here..."
+                local flag = options.Flag
                 local callback = options.Callback or function() end
 
                 local BoxContainer = Instance.new("Frame")
@@ -424,7 +556,7 @@ function Library:CreateWindow(title, wmText)
                 Lbl.Size = UDim2.new(1, 0, 0, 14)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -433,32 +565,41 @@ function Library:CreateWindow(title, wmText)
                 local InputBox = Instance.new("TextBox")
                 InputBox.Size = UDim2.new(1, 0, 0, 16)
                 InputBox.Position = UDim2.new(0, 0, 0, 16)
-                InputBox.BackgroundColor3 = Theme.ItemBG
+                InputBox.BackgroundColor3 = Library.Theme.ItemBG
                 InputBox.BorderSizePixel = 0
                 InputBox.Text = ""
                 InputBox.PlaceholderText = placeholder
-                InputBox.TextColor3 = Theme.Text
+                InputBox.TextColor3 = Library.Theme.Text
                 InputBox.Font = Enum.Font.Code
                 InputBox.TextSize = 11
                 InputBox.TextXAlignment = Enum.TextXAlignment.Left
                 InputBox.Parent = BoxContainer
-                Instance.new("UIStroke", InputBox).Color = Theme.Border
+                Instance.new("UIStroke", InputBox).Color = Library.Theme.Border
+                Instance.new("UIPadding", InputBox).PaddingLeft = UDim.new(0, 4)
 
-                local PaddingBox = Instance.new("UIPadding")
-                PaddingBox.PaddingLeft = UDim.new(0, 4)
-                PaddingBox.Parent = InputBox
+                -- CONFIG SYSTEM REGISTRATION
+                if flag then
+                    Library.Flags[flag] = {
+                        Value = "",
+                        Set = function(self, val)
+                            InputBox.Text = tostring(val)
+                            self.Value = val
+                            pcall(callback, val)
+                        end
+                    }
+                end
 
-                InputBox.FocusLost:Connect(function(enterPressed)
-                    local s, e = pcall(callback, InputBox.Text)
-                    if not s then warn("[Kral UI Error] TextBox failed:", e) end
+                InputBox.FocusLost:Connect(function()
+                    if flag then Library.Flags[flag].Value = InputBox.Text end
+                    pcall(callback, InputBox.Text)
                 end)
             end
 
-            -- ==================== TOGGLE ====================
             function GBData:CreateToggle(options)
                 local name = options.Name or "Toggle"
                 local state = options.Default or false
                 local bind = options.Keybind 
+                local flag = options.Flag
                 local callback = options.Callback or function() end
 
                 local TContainer = Instance.new("Frame")
@@ -475,28 +616,42 @@ function Library:CreateWindow(title, wmText)
                 local CheckBox = Instance.new("Frame")
                 CheckBox.Size = UDim2.new(0, 12, 0, 12)
                 CheckBox.Position = UDim2.new(0, 0, 0, 1)
-                CheckBox.BackgroundColor3 = state and Theme.Accent or Theme.ItemBG
+                CheckBox.BackgroundColor3 = state and Library.Theme.Accent or Library.Theme.ItemBG
                 CheckBox.BorderSizePixel = 0
                 CheckBox.Parent = MainBtn
-                Instance.new("UIStroke", CheckBox).Color = Theme.Border
+                Instance.new("UIStroke", CheckBox).Color = Library.Theme.Border
 
                 local Lbl = Instance.new("TextLabel")
                 Lbl.Size = UDim2.new(1, -20, 1, 0)
                 Lbl.Position = UDim2.new(0, 20, 0, 0)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
                 Lbl.Parent = MainBtn
 
+                -- CONFIG SYSTEM REGISTRATION
+                if flag then
+                    Library.Flags[flag] = {
+                        Value = state,
+                        Set = function(self, val)
+                            state = val
+                            self.Value = val
+                            CheckBox.BackgroundColor3 = val and Library.Theme.Accent or Library.Theme.ItemBG
+                            if bind then UpdateKeybindList(name, bind, val) end
+                            pcall(callback, val)
+                        end
+                    }
+                end
+
                 local function Fire()
                     state = not state
-                    CheckBox.BackgroundColor3 = state and Theme.Accent or Theme.ItemBG
+                    if flag then Library.Flags[flag].Value = state end
+                    CheckBox.BackgroundColor3 = state and Library.Theme.Accent or Library.Theme.ItemBG
                     if bind then UpdateKeybindList(name, bind, state) end
-                    local s, e = pcall(callback, state)
-                    if not s then warn("[Kral UI Error] Toggle failed:", e) end
+                    pcall(callback, state)
                 end
 
                 if bind then UpdateKeybindList(name, bind, state) end
@@ -540,13 +695,13 @@ function Library:CreateWindow(title, wmText)
                 end
             end
 
-            -- ==================== SLIDER ====================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
                 local min = options.Min or 0
                 local max = options.Max or 100
                 local increment = options.Increment or 1
                 local current = options.Default or min
+                local flag = options.Flag
                 local callback = options.Callback or function() end
 
                 local SContainer = Instance.new("Frame")
@@ -558,7 +713,7 @@ function Library:CreateWindow(title, wmText)
                 Lbl.Size = UDim2.new(1, 0, 0, 14)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -567,16 +722,16 @@ function Library:CreateWindow(title, wmText)
                 local BG = Instance.new("TextButton")
                 BG.Size = UDim2.new(1, 0, 0, 10)
                 BG.Position = UDim2.new(0, 0, 0, 16)
-                BG.BackgroundColor3 = Theme.ItemBG
+                BG.BackgroundColor3 = Library.Theme.ItemBG
                 BG.BorderSizePixel = 0
                 BG.Text = ""
                 BG.AutoButtonColor = false
                 BG.Parent = SContainer
-                Instance.new("UIStroke", BG).Color = Theme.Border
+                Instance.new("UIStroke", BG).Color = Library.Theme.Border
 
                 local Fill = Instance.new("Frame")
                 Fill.Size = UDim2.new(math.clamp((current - min) / (max - min), 0, 1), 0, 1, 0)
-                Fill.BackgroundColor3 = Theme.Accent
+                Fill.BackgroundColor3 = Library.Theme.Accent
                 Fill.BorderSizePixel = 0
                 Fill.Parent = BG
 
@@ -589,16 +744,29 @@ function Library:CreateWindow(title, wmText)
                 ValLabel.TextSize = 10
                 ValLabel.Parent = BG
 
+                -- CONFIG SYSTEM REGISTRATION
+                if flag then
+                    Library.Flags[flag] = {
+                        Value = current,
+                        Set = function(self, val)
+                            val = math.clamp(val, min, max)
+                            self.Value = val
+                            Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
+                            local formatString = (increment % 1 == 0) and "%d/%d" or "%.1f/%.1f"
+                            ValLabel.Text = string.format(formatString, val, max)
+                            pcall(callback, val)
+                        end
+                    }
+                end
+
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
-                
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
                     end
                 end)
-                
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = false
@@ -617,21 +785,20 @@ function Library:CreateWindow(title, wmText)
                         val = math.clamp(val, min, max)
 
                         Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
-                        
                         local formatString = (increment % 1 == 0) and "%d/%d" or "%.1f/%.1f"
                         ValLabel.Text = string.format(formatString, val, max)
                         
-                        local s, e = pcall(callback, val)
-                        if not s then warn("[Kral UI Error] Slider failed:", e) end
+                        if flag then Library.Flags[flag].Value = val end
+                        pcall(callback, val)
                     end
                 end)
             end
 
-            -- ==================== DROPDOWN ====================
             function GBData:CreateDropdown(options)
                 local DropData = {}
                 local name = options.Name or "Dropdown"
                 local list = options.Options or {}
+                local flag = options.Flag
                 local callback = options.Callback or function() end
 
                 local DropContainer = Instance.new("Frame")
@@ -644,7 +811,7 @@ function Library:CreateWindow(title, wmText)
                 Lbl.Size = UDim2.new(1, 0, 0, 14)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -654,23 +821,23 @@ function Library:CreateWindow(title, wmText)
                 local MainBtn = Instance.new("TextButton")
                 MainBtn.Size = UDim2.new(1, 0, 0, 18)
                 MainBtn.Position = UDim2.new(0, 0, 0, 16)
-                MainBtn.BackgroundColor3 = Theme.ItemBG
+                MainBtn.BackgroundColor3 = Library.Theme.ItemBG
                 MainBtn.BorderSizePixel = 0
                 MainBtn.Text = " " .. (list[1] or "...")
-                MainBtn.TextColor3 = Theme.Text
+                MainBtn.TextColor3 = Library.Theme.Text
                 MainBtn.Font = Enum.Font.Code
                 MainBtn.TextSize = 12
                 MainBtn.TextXAlignment = Enum.TextXAlignment.Left
                 MainBtn.ZIndex = 5
                 MainBtn.Parent = DropContainer
-                Instance.new("UIStroke", MainBtn).Color = Theme.Border
+                Instance.new("UIStroke", MainBtn).Color = Library.Theme.Border
 
                 local Arrow = Instance.new("TextLabel")
                 Arrow.Size = UDim2.new(0, 18, 1, 0)
                 Arrow.Position = UDim2.new(1, -18, 0, 0)
                 Arrow.BackgroundTransparency = 1
                 Arrow.Text = "▼"
-                Arrow.TextColor3 = Theme.Text
+                Arrow.TextColor3 = Library.Theme.Text
                 Arrow.TextSize = 8
                 Arrow.ZIndex = 5
                 Arrow.Parent = MainBtn
@@ -678,16 +845,28 @@ function Library:CreateWindow(title, wmText)
                 local DropFrame = Instance.new("ScrollingFrame")
                 DropFrame.Size = UDim2.new(1, 0, 0, 0)
                 DropFrame.Position = UDim2.new(0, 0, 1, 2)
-                DropFrame.BackgroundColor3 = Theme.ItemBG
+                DropFrame.BackgroundColor3 = Library.Theme.ItemBG
                 DropFrame.BorderSizePixel = 0
                 DropFrame.Visible = false
                 DropFrame.ZIndex = 100 
                 DropFrame.ScrollBarThickness = 2
                 DropFrame.Parent = MainBtn
-                Instance.new("UIStroke", DropFrame).Color = Theme.Border
+                Instance.new("UIStroke", DropFrame).Color = Library.Theme.Border
                 
                 local DropLayout = Instance.new("UIListLayout")
                 DropLayout.Parent = DropFrame
+
+                -- CONFIG SYSTEM REGISTRATION
+                if flag then
+                    Library.Flags[flag] = {
+                        Value = list[1] or "",
+                        Set = function(self, val)
+                            MainBtn.Text = " " .. tostring(val)
+                            self.Value = val
+                            pcall(callback, val)
+                        end
+                    }
+                end
 
                 function DropData:Refresh(newList)
                     for _, child in pairs(DropFrame:GetChildren()) do
@@ -697,23 +876,26 @@ function Library:CreateWindow(title, wmText)
                     local count = #newList
                     DropFrame.Size = UDim2.new(1, 0, 0, math.clamp(count * 18, 0, 108)) 
                     DropFrame.CanvasSize = UDim2.new(0, 0, 0, count * 18)
-                    MainBtn.Text = " " .. (newList[1] or "...")
+                    
+                    if not flag or Library.Flags[flag].Value == "" then
+                        MainBtn.Text = " " .. (newList[1] or "...")
+                    end
 
                     for _, optionText in pairs(newList) do
                         local OptBtn = Instance.new("TextButton")
                         OptBtn.Size = UDim2.new(1, 0, 0, 18)
-                        OptBtn.BackgroundColor3 = Theme.ItemBG
+                        OptBtn.BackgroundColor3 = Library.Theme.ItemBG
                         OptBtn.BorderSizePixel = 0
                         OptBtn.Text = " " .. optionText
-                        OptBtn.TextColor3 = Theme.Text
+                        OptBtn.TextColor3 = Library.Theme.Text
                         OptBtn.Font = Enum.Font.Code
                         OptBtn.TextSize = 12
                         OptBtn.TextXAlignment = Enum.TextXAlignment.Left
                         OptBtn.ZIndex = 101
                         OptBtn.Parent = DropFrame
                         
-                        OptBtn.MouseEnter:Connect(function() OptBtn.TextColor3 = Theme.Accent end)
-                        OptBtn.MouseLeave:Connect(function() OptBtn.TextColor3 = Theme.Text end)
+                        OptBtn.MouseEnter:Connect(function() OptBtn.TextColor3 = Library.Theme.Accent end)
+                        OptBtn.MouseLeave:Connect(function() OptBtn.TextColor3 = Library.Theme.Text end)
                         
                         OptBtn.Activated:Connect(function()
                             MainBtn.Text = " " .. optionText
@@ -721,13 +903,15 @@ function Library:CreateWindow(title, wmText)
                             DropContainer.ZIndex = 5
                             Arrow.Text = "▼"
                             ActiveDropdown = nil
-                            local s, e = pcall(callback, optionText)
-                            if not s then warn("[Kral UI Error] Dropdown failed:", e) end
+                            
+                            if flag then Library.Flags[flag].Value = optionText end
+                            pcall(callback, optionText)
                         end)
                     end
                 end
 
                 function DropData:Set(newValue)
+                    if flag then Library.Flags[flag].Value = newValue end
                     MainBtn.Text = " " .. tostring(newValue)
                     pcall(callback, newValue)
                 end
@@ -749,10 +933,10 @@ function Library:CreateWindow(title, wmText)
                 return DropData
             end
 
-            -- ==================== COLOR PICKER ====================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
                 local defaultColor = options.Default or Color3.fromRGB(255, 255, 255)
+                local flag = options.Flag
                 local callback = options.Callback or function() end
 
                 local CPContainer = Instance.new("Frame")
@@ -764,7 +948,7 @@ function Library:CreateWindow(title, wmText)
                 Lbl.Size = UDim2.new(1, -30, 1, 0)
                 Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
+                Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
                 Lbl.TextSize = 12
                 Lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -777,29 +961,27 @@ function Library:CreateWindow(title, wmText)
                 ColorDisplay.BorderSizePixel = 0
                 ColorDisplay.Text = ""
                 ColorDisplay.Parent = CPContainer
-                Instance.new("UIStroke", ColorDisplay).Color = Theme.Border
+                Instance.new("UIStroke", ColorDisplay).Color = Library.Theme.Border
 
                 local Popup = Instance.new("Frame")
                 Popup.Size = UDim2.new(1, 0, 0, 180)
                 Popup.Position = UDim2.new(0, 0, 1, 5)
-                Popup.BackgroundColor3 = Theme.ItemBG
+                Popup.BackgroundColor3 = Library.Theme.ItemBG
                 Popup.BorderSizePixel = 0
                 Popup.Visible = false
                 Popup.ZIndex = 80
                 Popup.Parent = CPContainer
-                Instance.new("UIStroke", Popup).Color = Theme.Border
+                Instance.new("UIStroke", Popup).Color = Library.Theme.Border
 
                 local PopLayout = Instance.new("UIListLayout")
                 PopLayout.SortOrder = Enum.SortOrder.LayoutOrder
                 PopLayout.Padding = UDim.new(0, 5)
                 PopLayout.Parent = Popup
                 
-                local PopPadding = Instance.new("UIPadding")
-                PopPadding.PaddingTop = UDim.new(0, 5)
-                PopPadding.PaddingBottom = UDim.new(0, 5)
-                PopPadding.PaddingLeft = UDim.new(0, 5)
-                PopPadding.PaddingRight = UDim.new(0, 5)
-                PopPadding.Parent = Popup
+                Instance.new("UIPadding", Popup).PaddingTop = UDim.new(0, 5)
+                Instance.new("UIPadding", Popup).PaddingBottom = UDim.new(0, 5)
+                Instance.new("UIPadding", Popup).PaddingLeft = UDim.new(0, 5)
+                Instance.new("UIPadding", Popup).PaddingRight = UDim.new(0, 5)
 
                 local isOpen = false
                 ColorDisplay.Activated:Connect(function()
@@ -864,8 +1046,21 @@ function Library:CreateWindow(title, wmText)
                     
                     SVIndicator.Position = UDim2.new(currentHSV[2], 0, 1 - currentHSV[3], 0)
                     HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
-                    local s, e = pcall(callback, col)
-                    if not s then warn("[Kral UI Error] ColorPicker failed:", e) end
+                    
+                    if flag then Library.Flags[flag].Value = col end
+                    pcall(callback, col)
+                end
+
+                -- CONFIG SYSTEM REGISTRATION
+                if flag then
+                    Library.Flags[flag] = {
+                        Value = defaultColor,
+                        Set = function(self, val)
+                            local h, s, v = Color3.toHSV(val)
+                            currentHSV = {h, s, v}
+                            SetColor()
+                        end
+                    }
                 end
 
                 SetColor()
@@ -884,8 +1079,7 @@ function Library:CreateWindow(title, wmText)
 
                 SatValGrid.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isSatValDragging = true
-                        UpdateSatVal(input)
+                        isSatValDragging = true; UpdateSatVal(input)
                     end
                 end)
                 
@@ -898,82 +1092,20 @@ function Library:CreateWindow(title, wmText)
 
                 HueBar.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isHueDragging = true
-                        UpdateHue(input)
+                        isHueDragging = true; UpdateHue(input)
                     end
                 end)
 
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isSatValDragging = false
-                        isHueDragging = false
+                        isSatValDragging = false; isHueDragging = false
                     end
                 end)
 
                 UIS.InputChanged:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                        if isSatValDragging then
-                            UpdateSatVal(input)
-                        elseif isHueDragging then
-                            UpdateHue(input)
-                        end
-                    end
-                end)
-            end
-
-            -- ==================== STANDALONE KEYBIND ====================
-            function GBData:CreateKeybind(options)
-                local name = options.Name or "Keybind"
-                local bind = options.Default
-                local callback = options.Callback or function() end
-
-                local BContainer = Instance.new("Frame")
-                BContainer.Size = UDim2.new(1, 0, 0, 14)
-                BContainer.BackgroundTransparency = 1
-                BContainer.Parent = ItemContainer
-
-                local Lbl = Instance.new("TextLabel")
-                Lbl.Size = UDim2.new(1, -40, 1, 0)
-                Lbl.BackgroundTransparency = 1
-                Lbl.Text = name
-                Lbl.TextColor3 = Theme.Text
-                Lbl.Font = Enum.Font.Code
-                Lbl.TextSize = 12
-                Lbl.TextXAlignment = Enum.TextXAlignment.Left
-                Lbl.Parent = BContainer
-
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 40, 1, 0)
-                BindBtn.Position = UDim2.new(1, -40, 0, 0)
-                BindBtn.BackgroundTransparency = 1
-                BindBtn.Text = bind and "["..bind.."]" or "[None]"
-                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BindBtn.Font = Enum.Font.Code
-                BindBtn.TextSize = 11
-                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
-                BindBtn.Parent = BContainer
-
-                local isListening = false
-                BindBtn.Activated:Connect(function()
-                    BindBtn.Text = "[...]"
-                    isListening = true
-                end)
-
-                UIS.InputBegan:Connect(function(input, gameProcessed)
-                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
-                            bind = nil
-                            BindBtn.Text = "[None]"
-                        else
-                            bind = input.KeyCode.Name
-                            BindBtn.Text = "[" .. bind .. "]"
-                            local s, e = pcall(callback, bind)
-                            if not s then warn("[Kral UI Error] Keybind failed:", e) end
-                        end
-                        isListening = false
-                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                        local s, e = pcall(callback, bind)
-                        if not s then warn("[Kral UI Error] Keybind trigger failed:", e) end
+                        if isSatValDragging then UpdateSatVal(input)
+                        elseif isHueDragging then UpdateHue(input) end
                     end
                 end)
             end
