@@ -363,18 +363,18 @@ function Library:CreateWindow(title, wmText)
 
         local LeftColumn = Instance.new("Frame")
         LeftColumn.Size = UDim2.new(0.49, 0, 1, 0)
-        LeftColumn.Position = UDim2.new(0.01, 0, 0, 15) -- Pushed 15px from top
         LeftColumn.BackgroundTransparency = 1
         LeftColumn.Parent = Page
         
         local LeftLayout = Instance.new("UIListLayout")
         LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
         LeftLayout.Padding = UDim.new(0, 12)
+        LeftLayout.Position = UDim2.new(0, 0, 0, -2)
         LeftLayout.Parent = LeftColumn
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.49, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 15) -- Pushed 15px from top
+        RightColumn.Position = UDim2.new(0.51, 0, 0, -2)
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
@@ -408,7 +408,7 @@ function Library:CreateWindow(title, wmText)
             side = side or "Left"
             
             local GroupBox = Instance.new("Frame")
-            GroupBox.Size = UDim2.new(1, 0, 0, 0)
+            GroupBox.Size = UDim2.new(1, 0, 0, -3)
             GroupBox.BackgroundColor3 = Library.Theme.DarkBG
             GroupBox.BorderSizePixel = 0
             GroupBox.AutomaticSize = Enum.AutomaticSize.Y
