@@ -369,12 +369,12 @@ function Library:CreateWindow(title, wmText)
         local LeftLayout = Instance.new("UIListLayout")
         LeftLayout.SortOrder = Enum.SortOrder.LayoutOrder
         LeftLayout.Padding = UDim.new(0, 12)
-        RightColumn.Position = UDim2.new(0, 0, 0, 2)
+        LeftLayout.Position = UDim2.new(0, 0, 0, -2)
         LeftLayout.Parent = LeftColumn
 
         local RightColumn = Instance.new("Frame")
         RightColumn.Size = UDim2.new(0.49, 0, 1, 0)
-        RightColumn.Position = UDim2.new(0.51, 0, 0, 2)
+        RightColumn.Position = UDim2.new(0.51, 0, 0, -2)
         RightColumn.BackgroundTransparency = 1
         RightColumn.Parent = Page
         
