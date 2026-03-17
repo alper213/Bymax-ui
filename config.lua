@@ -1,10 +1,10 @@
 -- ==============================================================================
--- BYMAX SAVE MANAGER - V4 (NO-FOLDER ANTI-CRASH SYSTEM)
+-- BYMAX SAVE MANAGER - V5 (ABSOLUTE NO-FOLDER & INVINCIBLE)
 -- ==============================================================================
 local HttpService = game:GetService("HttpService")
 
 local SaveManager = {
-    Prefix = "BymaxCfg_", -- No folders! We just prefix the file names.
+    Prefix = "BymaxCfg_",
     Library = nil
 }
 
@@ -12,7 +12,6 @@ function SaveManager:SetLibrary(lib)
     self.Library = lib
 end
 
--- Completely abandoned Folders to bypass executor C++ crashes.
 function SaveManager:SetPrefix(prefixName)
     self.Prefix = prefixName .. "_"
 end
@@ -25,13 +24,9 @@ function SaveManager:GetAutoPath()
     return self.Prefix .. "Autoload.txt"
 end
 
--- ========================================================
--- CORE SAVE FUNCTIONS
--- ========================================================
 function SaveManager:GetConfigs()
     local list = {}
-    
-    -- Safe listfiles check for root directory across different executors
+    -- Universal listfiles check for all weird executors
     local s, files = pcall(function() return listfiles("") end)
     if not s or type(files) ~= "table" then
         s, files = pcall(function() return listfiles(".") end)
@@ -42,7 +37,6 @@ function SaveManager:GetConfigs()
 
     if s and type(files) == "table" then
         for _, file in ipairs(files) do
-            -- Match files that start with our prefix
             local pattern = self.Prefix .. "([^/\\]+)%.json$"
             local fileName = file:match(pattern)
             if fileName then 
@@ -73,7 +67,6 @@ function SaveManager:Save(name)
         self.Library:Notify("Config Saved", "Saved:\n" .. name, 3)
     else 
         self.Library:Notify("Error", "Save failed! Executor blocked writefile.", 4) 
-        warn("[Bymax SaveManager] Save Error:", err)
     end
 end
 
@@ -97,8 +90,7 @@ function SaveManager:Load(name)
     if s then 
         self.Library:Notify("Config Loaded", "Loaded:\n" .. name, 3)
     else 
-        self.Library:Notify("Error", "Load failed! File broken/missing.", 4) 
-        warn("[Bymax SaveManager] Load Error:", err)
+        self.Library:Notify("Error", "Load failed!", 4) 
     end
 end
 
@@ -126,14 +118,8 @@ function SaveManager:DoAutoload()
     end
 end
 
--- ========================================================
--- CONFIG UI BUILDER
--- ========================================================
 function SaveManager:BuildConfigSection(targetTab)
-    if not self.Library then 
-        warn("[Bymax SaveManager] You must call SaveManager:SetLibrary(Library) first!") 
-        return 
-    end
+    if not self.Library then return end
     
     local Group = targetTab:CreateGroupbox("Configuration", "Right")
     local configNameBox, selectedConfig = "", ""
