@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V20 (PERFECT TWEEN NOTIFICATIONS & SECURE FOLDER INIT)
+-- BYMAX UI LIBRARY - V21 (MODULAR EDITION & PERFECT NOTIFICATIONS)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -16,7 +16,6 @@ local Library = {
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 
 local TargetParent
@@ -54,7 +53,6 @@ UIListLayoutNotif.Parent = NotifLayout
 function Library:Notify(title, text, duration)
     duration = duration or 4
 
-    -- Invisible Wrapper to bypass UIListLayout Position Lock
     local NWrapper = Instance.new("Frame")
     NWrapper.Size = UDim2.new(1, 0, 0, 65)
     NWrapper.BackgroundTransparency = 1
@@ -64,7 +62,7 @@ function Library:Notify(title, text, duration)
     NContainer.Size = UDim2.new(1, 0, 1, 0)
     NContainer.BackgroundColor3 = Library.Theme.DarkBG
     NContainer.BorderSizePixel = 0
-    NContainer.Position = UDim2.new(1, 300, 0, 0) -- Start off-screen (Right)
+    NContainer.Position = UDim2.new(1, 300, 0, 0) 
     NContainer.Parent = NWrapper
     Instance.new("UIStroke", NContainer).Color = Library.Theme.Border
 
@@ -85,7 +83,6 @@ function Library:Notify(title, text, duration)
     NTitle.TextXAlignment = Enum.TextXAlignment.Left
     NTitle.Parent = NContainer
 
-    -- CLOSE BUTTON
     local CloseBtn = Instance.new("TextButton")
     CloseBtn.Size = UDim2.new(0, 20, 0, 20)
     CloseBtn.Position = UDim2.new(1, -25, 0, 5)
@@ -109,7 +106,6 @@ function Library:Notify(title, text, duration)
     NText.TextWrapped = true
     NText.Parent = NContainer
 
-    -- Smooth Slide In
     local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     TweenIn:Play()
 
@@ -125,7 +121,6 @@ function Library:Notify(title, text, duration)
 
     CloseBtn.Activated:Connect(CloseNotification)
 
-    -- Auto close after duration
     task.spawn(function()
         task.wait(duration)
         CloseNotification()
@@ -431,10 +426,6 @@ function Library:CreateWindow(title, wmText)
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
 
-            local TitleConstraint = Instance.new("UISizeConstraint")
-            TitleConstraint.MaxSize = Vector2.new(220, 14) 
-            TitleConstraint.Parent = TitleContainer
-
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
@@ -443,7 +434,6 @@ function Library:CreateWindow(title, wmText)
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
             GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
-            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd 
             GBTitle.ZIndex = 6
             GBTitle.Parent = TitleContainer
 
@@ -494,8 +484,7 @@ function Library:CreateWindow(title, wmText)
                 Btn.MouseEnter:Connect(function() Btn.TextColor3 = Library.Theme.Accent end)
                 Btn.MouseLeave:Connect(function() Btn.TextColor3 = Library.Theme.Text end)
                 Btn.Activated:Connect(function() 
-                    local success, err = pcall(callback)
-                    if not success then warn("[Bymax UI Error] Button failed:", err) end
+                    pcall(callback)
                 end)
             end
 
@@ -1155,191 +1144,6 @@ function Library:CreateWindow(title, wmText)
         return TabData
     end
     return WindowData
-end
-
--- ==============================================================================
--- UI SETTINGS & ROBUST CONFIG MANAGER (ERROR-PROOF)
--- ==============================================================================
-Library.UISettings = {}
-Library.UISettings.Folder = "Bymax_Configs" -- DEFAULT SAFE FOLDER NAME (NO SPACES)
-
-function Library.UISettings:GetAutoFile()
-    return self.Folder .. "/Autoload.txt"
-end
-
-function Library.UISettings:Init()
-    if not isfolder or not makefolder or not writefile or not readfile then
-        warn("[Bymax UI] Executor lacks file functions.")
-        return false
-    end
-    local s, err = pcall(function()
-        if not isfolder(self.Folder) then makefolder(self.Folder) end
-    end)
-    if not s then warn("[Bymax UI] Folder creation failed:", err) return false end
-    return true
-end
-
-function Library.UISettings:GetConfigs()
-    local list = {}
-    if self:Init() then
-        pcall(function()
-            for _, file in ipairs(listfiles(self.Folder)) do
-                local fileName = file:match("([^/\\]+)%.json$")
-                if fileName then table.insert(list, fileName) end
-            end
-        end)
-    end
-    return list
-end
-
-function Library.UISettings:Save(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local data = {}
-    for flag, element in pairs(Library.Flags) do
-        local val = element.Value
-        if typeof(val) == "Color3" then val = {R = val.R, G = val.G, B = val.B, IsColor3 = true} end
-        data[flag] = val
-    end
-    local s, err = pcall(function()
-        local encoded = HttpService:JSONEncode(data)
-        writefile(self.Folder .. "/" .. configName .. ".json", encoded)
-    end)
-    if s then Library:Notify("Config System", "Saved successfully:\n" .. configName, 4)
-    else Library:Notify("Error", "Save failed! Check F9 console.", 4) warn(err) end
-end
-
-function Library.UISettings:Load(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local path = self.Folder .. "/" .. configName .. ".json"
-    local s, err = pcall(function()
-        local content = readfile(path)
-        local decoded = HttpService:JSONDecode(content)
-        if type(decoded) == "table" then
-            for flag, savedValue in pairs(decoded) do
-                if Library.Flags[flag] and Library.Flags[flag].Set then
-                    if type(savedValue) == "table" and savedValue.IsColor3 then
-                        savedValue = Color3.new(savedValue.R, savedValue.G, savedValue.B)
-                    end
-                    Library.Flags[flag]:Set(savedValue)
-                end
-            end
-        end
-    end)
-    if s then Library:Notify("Config System", "Loaded successfully:\n" .. configName, 4)
-    else Library:Notify("Error", "Load failed! Check F9 console.", 4) warn(err) end
-end
-
-function Library.UISettings:Delete(configName)
-    if not configName or configName == "" or not self:Init() then return end
-    local s, err = pcall(function() delfile(self.Folder .. "/" .. configName .. ".json") end)
-    if s then Library:Notify("Config System", "Deleted config:\n" .. configName, 4)
-    else Library:Notify("Error", "Delete failed!", 4) warn(err) end
-end
-
-function Library.UISettings:SetAutoload(configName)
-    if not self:Init() then return end
-    local s, err = pcall(function() writefile(self:GetAutoFile(), configName) end)
-    if s then Library:Notify("Autoload Set", "Will auto-load:\n" .. configName, 4)
-    else warn(err) end
-end
-
-function Library.UISettings:DoAutoload()
-    if not self:Init() then return end
-    pcall(function()
-        local content = readfile(self:GetAutoFile())
-        if content and content ~= "" then 
-            Library:Notify("Autoload", "Loading default config...", 3)
-            self:Load(content) 
-        end
-    end)
-end
-
-function Library.UISettings:BuildSettingsSection(windowData, targetTab)
-    -- IF THE EXECUTOR CAN'T MAKE FOLDERS, WE WARN BUT STILL BUILD THE TAB
-    if not self:Init() then
-        Library:Notify("Warning", "Your executor doesn't support Configs properly.", 5)
-    end
-    
-    local MenuSettings = targetTab:CreateGroupbox("Menu Interface", "Left")
-    
-    MenuSettings:CreateKeybind({
-        Name = "Menu Toggle Bind",
-        Default = "RightShift",
-        Callback = function(bindName)
-            if bindName then 
-                windowData.MenuBind = Enum.KeyCode[bindName] 
-                Library:Notify("Keybind Update", "Menu key set to [" .. bindName .. "]", 3)
-            end
-        end
-    })
-
-    MenuSettings:CreateButton({
-        Name = "Unload UI",
-        Callback = function() 
-            windowData:Unload() 
-        end
-    })
-
-    local ConfigGroup = targetTab:CreateGroupbox("Configuration", "Right")
-    local configNameBox = ""
-    local selectedConfig = ""
-
-    ConfigGroup:CreateTextBox({
-        Name = "Config Name",
-        Placeholder = "Enter name...",
-        Callback = function(val) configNameBox = val end
-    })
-
-    local configDropdown = ConfigGroup:CreateDropdown({
-        Name = "Select Config",
-        Options = self:GetConfigs(),
-        Callback = function(val) selectedConfig = val end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Save Config",
-        Callback = function()
-            local nameToSave = (configNameBox ~= "") and configNameBox or selectedConfig
-            if nameToSave ~= "" then
-                self:Save(nameToSave)
-                configDropdown:Refresh(self:GetConfigs())
-            end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Load Config",
-        Callback = function()
-            if selectedConfig ~= "" then self:Load(selectedConfig) end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Delete Config",
-        Callback = function()
-            if selectedConfig ~= "" then
-                self:Delete(selectedConfig)
-                configDropdown:Refresh(self:GetConfigs())
-                configDropdown:Set("...")
-                selectedConfig = ""
-            end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Set as Autoload",
-        Callback = function()
-            if selectedConfig ~= "" then self:SetAutoload(selectedConfig) end
-        end
-    })
-
-    ConfigGroup:CreateButton({
-        Name = "Refresh List",
-        Callback = function() 
-            configDropdown:Refresh(self:GetConfigs()) 
-            Library:Notify("Refreshed", "Config list updated.", 2)
-        end
-    })
 end
 
 return Library
