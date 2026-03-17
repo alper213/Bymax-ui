@@ -1,6 +1,6 @@
 
 
-```markdown
+
 # Bymax UI Library V28 (Official Release)
 
 Bymax UI is a high-performance, lightweight interface library designed specifically for Roblox scripters. This version focuses on eliminating alignment bugs, ensuring mobile compatibility, and preventing executor-level crashes common in other libraries.
@@ -15,7 +15,7 @@ Bymax UI is a high-performance, lightweight interface library designed specifica
 * **Hold-to-Use Logic:** Integrated support for toggles that only activate while a key is held down.
 * **Premium Aesthetics:** Dynamic borders that adjust to title length and active tab indicators.
 
----
+
 
 ## Installation
 
