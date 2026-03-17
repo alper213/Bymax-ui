@@ -407,7 +407,7 @@ function Library:CreateWindow(title, wmText)
             side = side or "Left"
             
             local GroupBox = Instance.new("Frame")
-            GroupBox.Size = UDim2.new(1, 0, 0, 0)
+            GroupBox.Size = UDim2.new(1, 0, 0, -3)
             GroupBox.BackgroundColor3 = Library.Theme.DarkBG
             GroupBox.BorderSizePixel = 0
             GroupBox.AutomaticSize = Enum.AutomaticSize.Y
