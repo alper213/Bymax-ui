@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - PURE EDITION V2 (TITLE FIX & ACCESSIBLE UI ELEMENTS)
+-- BYMAX UI LIBRARY - V23 (SECTION TITLE OFFSET & OVERFLOW FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -11,7 +11,6 @@ local Library = {
         DarkBG = Color3.fromRGB(20, 20, 20),
         ItemBG = Color3.fromRGB(30, 30, 30)
     },
-    -- These are added so we can toggle them from outside
     Watermark = nil,
     KeybindList = nil
 }
@@ -179,7 +178,7 @@ function Library:CreateWindow(title, wmText)
     WatermarkBG.Active = true
     WatermarkBG.Draggable = true
     WatermarkBG.Parent = ScreenGui
-    Library.Watermark = WatermarkBG -- Export for toggling
+    Library.Watermark = WatermarkBG 
     Instance.new("UIStroke", WatermarkBG).Color = Library.Theme.Border
 
     local WMTopLine = Instance.new("Frame")
@@ -224,7 +223,7 @@ function Library:CreateWindow(title, wmText)
     KeybindListBG.Draggable = true
     KeybindListBG.Visible = not isMobile 
     KeybindListBG.Parent = ScreenGui
-    Library.KeybindList = KeybindListBG -- Export for toggling
+    Library.KeybindList = KeybindListBG 
     Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
 
     local KLTopLine = Instance.new("Frame")
@@ -423,10 +422,10 @@ function Library:CreateWindow(title, wmText)
             GBBlueLine.Parent = GroupBox
             
             -- ========================================================
-            -- TITLE FIX: Position centered exactly on the blue line
+            -- TITLE FIX: POSITION ADJUSTED (-4) & CHARACTER LIMITER
             -- ========================================================
             local TitleContainer = Instance.new("Frame")
-            TitleContainer.Position = UDim2.new(0, 12, 0, -7) -- Adjusted to sit perfectly
+            TitleContainer.Position = UDim2.new(0, 10, 0, -4) -- Pushed down slightly
             TitleContainer.Size = UDim2.new(0, 0, 0, 14) 
             TitleContainer.AutomaticSize = Enum.AutomaticSize.X 
             TitleContainer.BackgroundColor3 = Library.Theme.DarkBG
@@ -434,10 +433,16 @@ function Library:CreateWindow(title, wmText)
             TitleContainer.ZIndex = 5 
             TitleContainer.Parent = GroupBox
 
+            -- Limits the title string to prevent overflow
+            local safeName = gbName
+            if string.len(safeName) > 18 then
+                safeName = string.sub(safeName, 1, 15) .. "..."
+            end
+
             local GBTitle = Instance.new("TextLabel")
             GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = " " .. gbName .. " "
+            GBTitle.Text = " " .. safeName .. " "
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
