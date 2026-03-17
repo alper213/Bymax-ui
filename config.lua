@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX SAVE MANAGER - V5 (ABSOLUTE NO-FOLDER & INVINCIBLE)
+-- BYMAX SAVE MANAGER - V6 (.TXT EXTENSION BYPASS & ERROR ISOLATION)
 -- ==============================================================================
 local HttpService = game:GetService("HttpService")
 
@@ -16,8 +16,11 @@ function SaveManager:SetPrefix(prefixName)
     self.Prefix = prefixName .. "_"
 end
 
+-- ========================================================
+-- NO MORE .JSON! WE USE .TXT TO BYPASS EXECUTOR BLOCKS
+-- ========================================================
 function SaveManager:GetPath(name)
-    return self.Prefix .. name .. ".json"
+    return self.Prefix .. name .. ".txt"
 end
 
 function SaveManager:GetAutoPath()
@@ -26,7 +29,7 @@ end
 
 function SaveManager:GetConfigs()
     local list = {}
-    -- Universal listfiles check for all weird executors
+    
     local s, files = pcall(function() return listfiles("") end)
     if not s or type(files) ~= "table" then
         s, files = pcall(function() return listfiles(".") end)
@@ -37,9 +40,10 @@ function SaveManager:GetConfigs()
 
     if s and type(files) == "table" then
         for _, file in ipairs(files) do
-            local pattern = self.Prefix .. "([^/\\]+)%.json$"
+            -- Match .txt files instead of .json
+            local pattern = self.Prefix .. "([^/\\]+)%.txt$"
             local fileName = file:match(pattern)
-            if fileName then 
+            if fileName and fileName ~= "Autoload" then 
                 table.insert(list, fileName) 
             end
         end
@@ -53,20 +57,35 @@ function SaveManager:Save(name)
     local data = {}
     for flag, element in pairs(self.Library.Flags) do
         local val = element.Value
+        -- Sadece desteklenen tipleri kaydet, bozuk veri executor'ı çökertmesin
         if typeof(val) == "Color3" then
-            val = {R = val.R, G = val.G, B = val.B, IsColor3 = true}
+            data[flag] = {R = val.R, G = val.G, B = val.B, IsColor3 = true}
+        elseif type(val) == "string" or type(val) == "number" or type(val) == "boolean" or type(val) == "table" then
+            data[flag] = val
         end
-        data[flag] = val
     end
     
-    local s, err = pcall(function()
-        writefile(self:GetPath(name), HttpService:JSONEncode(data))
+    -- ADIM 1: Veriyi çevir (Burada patlarsa veri bozuk demektir)
+    local encodeSuccess, encodedData = pcall(function()
+        return HttpService:JSONEncode(data)
+    end)
+
+    if not encodeSuccess then
+        self.Library:Notify("Error", "Data Encode failed!", 4)
+        warn("[Bymax SaveManager] JSONEncode Error:", encodedData)
+        return
+    end
+    
+    -- ADIM 2: Dosyayı .txt olarak kaydet (Burada patlarsa executor engelliyor demektir)
+    local writeSuccess, writeError = pcall(function()
+        writefile(self:GetPath(name), encodedData)
     end)
     
-    if s then 
+    if writeSuccess then 
         self.Library:Notify("Config Saved", "Saved:\n" .. name, 3)
     else 
-        self.Library:Notify("Error", "Save failed! Executor blocked writefile.", 4) 
+        self.Library:Notify("Error", "Writefile blocked! Check F9", 4) 
+        warn("[Bymax SaveManager] Writefile Error:", writeError)
     end
 end
 
@@ -90,7 +109,8 @@ function SaveManager:Load(name)
     if s then 
         self.Library:Notify("Config Loaded", "Loaded:\n" .. name, 3)
     else 
-        self.Library:Notify("Error", "Load failed!", 4) 
+        self.Library:Notify("Error", "Load failed! File broken/missing.", 4) 
+        warn("[Bymax SaveManager] Load Error:", err)
     end
 end
 
