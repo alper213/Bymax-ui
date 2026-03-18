@@ -1,4 +1,6 @@
-
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V37 (ULTIMATE STEALTH - ANTI-PROPERTY SCANNER BYPASS)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -644,6 +646,9 @@ function Library:CreateWindow(title, wmText)
                 end
             end
 
+            -- ========================================================
+            -- SLIDER: PROPERTY THROTTLE BYPASS
+            -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
                 local min = options.Min or 0
@@ -698,8 +703,12 @@ function Library:CreateWindow(title, wmText)
 
                 local isDragging = false
                 local currentVal = current
+                local lastVisualUpdate = 0
                 
-                local function UpdateVisuals(input)
+                local function UpdateVisuals(input, force)
+                    if not force and tick() - lastVisualUpdate < 0.08 then return end -- Throttled to ~12 FPS
+                    lastVisualUpdate = tick()
+
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
                     local sliderPos = BG.AbsolutePosition.X
                     local sliderSize = BG.AbsoluteSize.X
@@ -719,7 +728,7 @@ function Library:CreateWindow(title, wmText)
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
-                        UpdateVisuals(input)
+                        UpdateVisuals(input, true)
                     end
                 end)
                 
@@ -734,7 +743,7 @@ function Library:CreateWindow(title, wmText)
                 
                 UIS.InputChanged:Connect(function(input)
                     if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        UpdateVisuals(input)
+                        UpdateVisuals(input, false)
                     end
                 end)
             end
@@ -869,7 +878,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- ABSOLUTE STEALTH COLORPICKER
+            -- COLORPICKER: PROPERTY THROTTLE BYPASS
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -928,14 +937,11 @@ function Library:CreateWindow(title, wmText)
                     CPContainer.ZIndex = isOpen and 75 or 1
                 end)
 
-                local h, s, v = Color3.toHSV(defaultColor)
-                local draggingSV = false
-                local draggingHue = false
-                local rainbowActive = false
+                local currentHSV = {Color3.toHSV(defaultColor)}
 
                 local SatValGrid = Instance.new("ImageButton")
                 SatValGrid.Size = UDim2.new(1, 0, 1, -45)
-                SatValGrid.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
                 SatValGrid.Image = "rbxassetid://4155801252"
                 SatValGrid.AutoButtonColor = false
                 SatValGrid.ZIndex = 81
@@ -991,84 +997,96 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                local function UpdateVisuals()
-                    local col = Color3.fromHSV(h, s, v)
+                local lastVisualUpdate = 0
+                local function UpdateVisualsOnly(force)
+                    if not force and tick() - lastVisualUpdate < 0.08 then return end -- Throttled
+                    lastVisualUpdate = tick()
+                    
+                    local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
-                    SatValGrid.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                    SVIndicator.Position = UDim2.new(s, 0, 1 - v, 0)
-                    HueIndicator.Position = UDim2.new(h, 0, 0.5, 0)
+                    SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
+                    
+                    SVIndicator.Position = UDim2.new(currentHSV[2], 0, 1 - currentHSV[3], 0)
+                    HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
+                    
                     if flag then Library.Flags[flag].Value = col end
+                    return col
                 end
 
-                UpdateVisuals()
+                if flag then Library.Flags[flag] = { Value = defaultColor } end
+                UpdateVisualsOnly(true)
+                pcall(callback, defaultColor)
+
+                local isSatValDragging = false
+                local isHueDragging = false
+                local rainbowConnection = nil
+
+                RainbowBtn.Activated:Connect(function()
+                    if rainbowConnection then
+                        rainbowConnection:Disconnect()
+                        rainbowConnection = nil
+                        RainbowBtn.Text = "Rainbow: OFF"
+                        RainbowBtn.TextColor3 = Library.Theme.Text
+                    else
+                        RainbowBtn.Text = "Rainbow: ON"
+                        RainbowBtn.TextColor3 = Library.Theme.Accent
+                        rainbowConnection = task.spawn(function()
+                            while true do
+                                currentHSV[1] = (tick() * 0.1) % 1 
+                                UpdateVisualsOnly(true) 
+                                task.wait(0.1) -- RAINBOW DELAYED TO 10 FPS (ANTI-CHEAT SAFE)
+                            end
+                        end)
+                    end
+                end)
+
+                local function UpdateSatVal(input, force)
+                    if rainbowConnection then return end 
+                    local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
+                    local posX = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX)
+                    local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
+                    currentHSV[2] = posX / sizeX
+                    currentHSV[3] = 1 - (posY / sizeY)
+                    UpdateVisualsOnly(force)
+                end
 
                 SatValGrid.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if rainbowActive then return end
-                        draggingSV = true
-                        local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
-                        s = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX) / sizeX
-                        v = 1 - (math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY) / sizeY)
-                        UpdateVisuals()
+                        isSatValDragging = true
+                        UpdateSatVal(input, true)
                     end
                 end)
+                
+                local function UpdateHue(input, force)
+                    if rainbowConnection then return end
+                    local sizeX = HueBar.AbsoluteSize.X
+                    local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
+                    currentHSV[1] = posX / sizeX
+                    UpdateVisualsOnly(force)
+                end
 
                 HueBar.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if rainbowActive then return end
-                        draggingHue = true
-                        local sizeX = HueBar.AbsoluteSize.X
-                        h = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX) / sizeX
-                        UpdateVisuals()
-                    end
-                end)
-
-                UIS.InputChanged:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                        if draggingSV then
-                            local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
-                            local posX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
-                            local posY = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.Y or (UIS:GetMouseLocation().Y - 36)
-                            s = math.clamp(posX - SatValGrid.AbsolutePosition.X, 0, sizeX) / sizeX
-                            v = 1 - (math.clamp(posY - SatValGrid.AbsolutePosition.Y, 0, sizeY) / sizeY)
-                            UpdateVisuals()
-                        elseif draggingHue then
-                            local sizeX = HueBar.AbsoluteSize.X
-                            local posX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
-                            h = math.clamp(posX - HueBar.AbsolutePosition.X, 0, sizeX) / sizeX
-                            UpdateVisuals()
-                        end
+                        isHueDragging = true
+                        UpdateHue(input, true)
                     end
                 end)
 
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if draggingSV or draggingHue then
-                            draggingSV = false
-                            draggingHue = false
-                            -- ONLY FIRE CALLBACK WHEN USER LETS GO
-                            pcall(callback, Color3.fromHSV(h, s, v))
+                        if isSatValDragging or isHueDragging then
+                            isSatValDragging = false
+                            isHueDragging = false
+                            local finalCol = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
+                            pcall(callback, finalCol) 
                         end
                     end
                 end)
 
-                RainbowBtn.Activated:Connect(function()
-                    rainbowActive = not rainbowActive
-                    if rainbowActive then
-                        RainbowBtn.Text = "Rainbow: ON"
-                        RainbowBtn.TextColor3 = Library.Theme.Accent
-                        task.spawn(function()
-                            while rainbowActive do
-                                h = (tick() * 0.1) % 1
-                                UpdateVisuals()
-                                task.wait(0.05) -- SLOWED DOWN TO PREVENT ANY ANTI-CHEAT FLAGS
-                            end
-                        end)
-                    else
-                        RainbowBtn.Text = "Rainbow: OFF"
-                        RainbowBtn.TextColor3 = Library.Theme.Text
-                        -- Fire callback once when disabled
-                        pcall(callback, Color3.fromHSV(h, s, v))
+                UIS.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        if isSatValDragging then UpdateSatVal(input, false)
+                        elseif isHueDragging then UpdateHue(input, false) end
                     end
                 end)
             end
