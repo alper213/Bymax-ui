@@ -1,3 +1,6 @@
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V36 (ABSOLUTE STEALTH & COLORPICKER REWRITE)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -14,8 +17,7 @@ local Library = {
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local TargetParent
 local success = pcall(function() TargetParent = gethui and gethui() or game:GetService("CoreGui") end)
@@ -25,14 +27,24 @@ end
 
 local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 
+local function GenerateRandomName()
+    return HttpService:GenerateGUID(false):gsub("-", ""):sub(1, 12)
+end
+
+local RandomGuiName = GenerateRandomName()
+
 for _, v in pairs(TargetParent:GetChildren()) do
-    if v.Name == "BymaxUILib" then v:Destroy() end
+    if v:IsA("ScreenGui") and v:FindFirstChild("BymaxMarker") then 
+        v:Destroy() 
+    end
 end
 
 local NotifGui = Instance.new("ScreenGui")
-NotifGui.Name = "BymaxNotif"
+NotifGui.Name = GenerateRandomName()
 NotifGui.Parent = TargetParent
 NotifGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+local Marker1 = Instance.new("BoolValue", NotifGui)
+Marker1.Name = "BymaxMarker"
 
 local NotifLayout = Instance.new("Frame")
 NotifLayout.Size = UDim2.new(0, 250, 1, -20)
@@ -102,6 +114,7 @@ function Library:Notify(title, text, duration)
     NText.TextWrapped = true
     NText.Parent = NContainer
 
+    local TweenService = game:GetService("TweenService")
     local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     TweenIn:Play()
 
@@ -116,11 +129,7 @@ function Library:Notify(title, text, duration)
     end
 
     CloseBtn.Activated:Connect(CloseNotification)
-
-    task.spawn(function()
-        task.wait(duration)
-        CloseNotification()
-    end)
+    task.spawn(function() task.wait(duration) CloseNotification() end)
 end
 
 function Library:CreateWindow(title, wmText)
@@ -129,10 +138,12 @@ function Library:CreateWindow(title, wmText)
     WindowData.Tabs = {}
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "BymaxUILib"
+    ScreenGui.Name = RandomGuiName
     ScreenGui.Parent = TargetParent
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
     ScreenGui.ResetOnSpawn = false
+    local Marker2 = Instance.new("BoolValue", ScreenGui)
+    Marker2.Name = "BymaxMarker"
 
     function WindowData:Unload() 
         ScreenGui:Destroy() 
@@ -154,7 +165,7 @@ function Library:CreateWindow(title, wmText)
         MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140)
         
         local MobileToggleBtn = Instance.new("TextButton")
-        MobileToggleBtn.Name = "MobileToggle"
+        MobileToggleBtn.Name = GenerateRandomName()
         MobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
         MobileToggleBtn.Position = UDim2.new(1, -70, 0, 15)
         MobileToggleBtn.BackgroundColor3 = Library.Theme.DarkBG
@@ -206,21 +217,15 @@ function Library:CreateWindow(title, wmText)
     WMTextLabel.Font = Enum.Font.Code
     WMTextLabel.TextSize = 12
     WMTextLabel.Parent = WatermarkBG
+    Instance.new("UIPadding", WMTextLabel).PaddingLeft = UDim.new(0, 6)
+    WMTextLabel.UIPadding.PaddingRight = UDim.new(0, 6)
 
-    local WMPadding = Instance.new("UIPadding")
-    WMPadding.PaddingLeft = UDim.new(0, 6)
-    WMPadding.PaddingRight = UDim.new(0, 6)
-    WMPadding.Parent = WMTextLabel
-
-    local frames = 0
-    RunService.RenderStepped:Connect(function() frames = frames + 1 end)
     task.spawn(function()
         local baseText = wmText or "Bymax UI"
         while task.wait(1) do
             if not ScreenGui.Parent then break end 
             local timeStr = os.date("%H:%M:%S")
-            WMTextLabel.Text = string.format("%s | %s | %d FPS", baseText, timeStr, frames)
-            frames = 0
+            WMTextLabel.Text = string.format("%s | %s", baseText, timeStr)
         end
     end)
 
@@ -570,7 +575,7 @@ function Library:CreateWindow(title, wmText)
                 local Lbl = Instance.new("TextLabel")
                 Lbl.Size = UDim2.new(1, -20, 1, 0)
                 Lbl.Position = UDim2.new(0, 20, 0, 0)
-                BackgroundTransparency = 1
+                Lbl.BackgroundTransparency = 1
                 Lbl.Text = name
                 Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
@@ -866,7 +871,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER: LOKAL GÖRSEL + SADECE INPUT ENDED CALLBACK
+            -- ABSOLUTE STEALTH COLORPICKER
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -923,14 +928,16 @@ function Library:CreateWindow(title, wmText)
                     isOpen = not isOpen
                     Popup.Visible = isOpen
                     CPContainer.ZIndex = isOpen and 75 or 1
-                    UpdateCanvas()
                 end)
 
-                local currentHSV = {Color3.toHSV(defaultColor)}
+                local h, s, v = Color3.toHSV(defaultColor)
+                local draggingSV = false
+                local draggingHue = false
+                local rainbowActive = false
 
                 local SatValGrid = Instance.new("ImageButton")
                 SatValGrid.Size = UDim2.new(1, 0, 1, -45)
-                SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
+                SatValGrid.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
                 SatValGrid.Image = "rbxassetid://4155801252"
                 SatValGrid.AutoButtonColor = false
                 SatValGrid.ZIndex = 81
@@ -986,91 +993,84 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                -- SADECE MENÜDE GÖRSEL OLARAK RENK DEĞİŞTİRİR (CALLBACK YOK)
-                local function UpdateVisualsOnly()
-                    local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
+                local function UpdateVisuals()
+                    local col = Color3.fromHSV(h, s, v)
                     ColorDisplay.BackgroundColor3 = col
-                    SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
-                    
-                    SVIndicator.Position = UDim2.new(currentHSV[2], 0, 1 - currentHSV[3], 0)
-                    HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
-                    
+                    SatValGrid.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                    SVIndicator.Position = UDim2.new(s, 0, 1 - v, 0)
+                    HueIndicator.Position = UDim2.new(h, 0, 0.5, 0)
                     if flag then Library.Flags[flag].Value = col end
                 end
 
-                if flag then Library.Flags[flag] = { Value = defaultColor } end
-                UpdateVisualsOnly()
-                pcall(callback, defaultColor) -- Başlangıçta 1 kere çalışır
-
-                local isSatValDragging = false
-                local isHueDragging = false
-                local rainbowConnection = nil
-
-                RainbowBtn.Activated:Connect(function()
-                    if rainbowConnection then
-                        rainbowConnection:Disconnect()
-                        rainbowConnection = nil
-                        RainbowBtn.Text = "Rainbow: OFF"
-                        RainbowBtn.TextColor3 = Library.Theme.Text
-                    else
-                        RainbowBtn.Text = "Rainbow: ON"
-                        RainbowBtn.TextColor3 = Library.Theme.Accent
-                        rainbowConnection = RunService.RenderStepped:Connect(function()
-                            currentHSV[1] = (tick() * 0.2) % 1 
-                            UpdateVisualsOnly() 
-                            -- BURADA CALLBACK YOK! RAINBOW SADECE MENÜDE ÇALIŞIR.
-                        end)
-                    end
-                end)
-
-                local function UpdateSatVal(input)
-                    if rainbowConnection then return end 
-                    local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
-                    local posX = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX)
-                    local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
-                    currentHSV[2] = posX / sizeX
-                    currentHSV[3] = 1 - (posY / sizeY)
-                    UpdateVisualsOnly()
-                end
+                UpdateVisuals()
 
                 SatValGrid.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isSatValDragging = true
-                        UpdateSatVal(input)
+                        if rainbowActive then return end
+                        draggingSV = true
+                        local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
+                        s = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX) / sizeX
+                        v = 1 - (math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY) / sizeY)
+                        UpdateVisuals()
                     end
                 end)
-                
-                local function UpdateHue(input)
-                    if rainbowConnection then return end
-                    local sizeX = HueBar.AbsoluteSize.X
-                    local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
-                    currentHSV[1] = posX / sizeX
-                    UpdateVisualsOnly()
-                end
 
                 HueBar.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isHueDragging = true
-                        UpdateHue(input)
-                    end
-                end)
-
-                -- PARMAK ÇEKİLDİĞİNDE SADECE 1 KEZ VERİ GÖNDERİLİR
-                UIS.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if isSatValDragging or isHueDragging then
-                            isSatValDragging = false
-                            isHueDragging = false
-                            local finalCol = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
-                            pcall(callback, finalCol) 
-                        end
+                        if rainbowActive then return end
+                        draggingHue = true
+                        local sizeX = HueBar.AbsoluteSize.X
+                        h = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX) / sizeX
+                        UpdateVisuals()
                     end
                 end)
 
                 UIS.InputChanged:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                        if isSatValDragging then UpdateSatVal(input)
-                        elseif isHueDragging then UpdateHue(input) end
+                        if draggingSV then
+                            local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
+                            local posX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
+                            local posY = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.Y or (UIS:GetMouseLocation().Y - 36)
+                            s = math.clamp(posX - SatValGrid.AbsolutePosition.X, 0, sizeX) / sizeX
+                            v = 1 - (math.clamp(posY - SatValGrid.AbsolutePosition.Y, 0, sizeY) / sizeY)
+                            UpdateVisuals()
+                        elseif draggingHue then
+                            local sizeX = HueBar.AbsoluteSize.X
+                            local posX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
+                            h = math.clamp(posX - HueBar.AbsolutePosition.X, 0, sizeX) / sizeX
+                            UpdateVisuals()
+                        end
+                    end
+                end)
+
+                UIS.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        if draggingSV or draggingHue then
+                            draggingSV = false
+                            draggingHue = false
+                            -- ONLY FIRE CALLBACK WHEN USER LETS GO
+                            pcall(callback, Color3.fromHSV(h, s, v))
+                        end
+                    end
+                end)
+
+                RainbowBtn.Activated:Connect(function()
+                    rainbowActive = not rainbowActive
+                    if rainbowActive then
+                        RainbowBtn.Text = "Rainbow: ON"
+                        RainbowBtn.TextColor3 = Library.Theme.Accent
+                        task.spawn(function()
+                            while rainbowActive do
+                                h = (tick() * 0.1) % 1
+                                UpdateVisuals()
+                                task.wait(0.05) -- SLOWED DOWN TO PREVENT ANY ANTI-CHEAT FLAGS
+                            end
+                        end)
+                    else
+                        RainbowBtn.Text = "Rainbow: OFF"
+                        RainbowBtn.TextColor3 = Library.Theme.Text
+                        -- Fire callback once when disabled
+                        pcall(callback, Color3.fromHSV(h, s, v))
                     end
                 end)
             end
