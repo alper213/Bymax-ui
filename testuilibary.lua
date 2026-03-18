@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V37 (ULTIMATE STEALTH - ANTI-PROPERTY SCANNER BYPASS)
+-- BYMAX UI LIBRARY - V38 (PHANTOM ZERO DELAY & INSTANT CALLBACKS)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -18,6 +18,8 @@ local Library = {
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local TargetParent
 local success = pcall(function() TargetParent = gethui and gethui() or game:GetService("CoreGui") end)
@@ -28,13 +30,13 @@ end
 local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 
 local function GenerateRandomName()
-    return HttpService:GenerateGUID(false):gsub("-", ""):sub(1, 12)
+    return HttpService:GenerateGUID(false):gsub("-", ""):sub(1, 14)
 end
 
 local RandomGuiName = GenerateRandomName()
 
 for _, v in pairs(TargetParent:GetChildren()) do
-    if v:IsA("ScreenGui") and v:FindFirstChild("BymaxMarker") then 
+    if v:IsA("ScreenGui") and v:FindFirstChild("BymaxPhantomMarker") then 
         v:Destroy() 
     end
 end
@@ -44,7 +46,7 @@ NotifGui.Name = GenerateRandomName()
 NotifGui.Parent = TargetParent
 NotifGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 local Marker1 = Instance.new("BoolValue", NotifGui)
-Marker1.Name = "BymaxMarker"
+Marker1.Name = "BymaxPhantomMarker"
 
 local NotifLayout = Instance.new("Frame")
 NotifLayout.Size = UDim2.new(0, 250, 1, -20)
@@ -114,7 +116,6 @@ function Library:Notify(title, text, duration)
     NText.TextWrapped = true
     NText.Parent = NContainer
 
-    local TweenService = game:GetService("TweenService")
     local TweenIn = TweenService:Create(NContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     TweenIn:Play()
 
@@ -143,7 +144,7 @@ function Library:CreateWindow(title, wmText)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
     ScreenGui.ResetOnSpawn = false
     local Marker2 = Instance.new("BoolValue", ScreenGui)
-    Marker2.Name = "BymaxMarker"
+    Marker2.Name = "BymaxPhantomMarker"
 
     function WindowData:Unload() 
         ScreenGui:Destroy() 
@@ -647,7 +648,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- SLIDER: PROPERTY THROTTLE BYPASS
+            -- SLIDER: ABSOLUTE ZERO DELAY (0 MS THROTTLE)
             -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
@@ -702,13 +703,8 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
-                local currentVal = current
-                local lastVisualUpdate = 0
                 
-                local function UpdateVisuals(input, force)
-                    if not force and tick() - lastVisualUpdate < 0.08 then return end -- Throttled to ~12 FPS
-                    lastVisualUpdate = tick()
-
+                local function UpdateVisualsAndCallback(input)
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
                     local sliderPos = BG.AbsolutePosition.X
                     local sliderSize = BG.AbsoluteSize.X
@@ -716,19 +712,22 @@ function Library:CreateWindow(title, wmText)
                     
                     local val = min + ((max - min) * percent)
                     val = math.floor((val / increment) + 0.5) * increment
-                    currentVal = math.clamp(val, min, max)
+                    local currentVal = math.clamp(val, min, max)
 
                     Fill.Size = UDim2.new((currentVal - min) / (max - min), 0, 1, 0)
                     local formatString = (increment % 1 == 0) and "%d/%d" or "%.1f/%.1f"
                     ValLabel.Text = string.format(formatString, currentVal, max)
                     
                     if flag then Library.Flags[flag].Value = currentVal end
+                    
+                    -- ZERO DELAY CALLBACK (INSTANT PRINT/UPDATE)
+                    pcall(callback, currentVal)
                 end
                 
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
-                        UpdateVisuals(input, true)
+                        UpdateVisualsAndCallback(input)
                     end
                 end)
                 
@@ -736,14 +735,13 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         if isDragging then
                             isDragging = false
-                            pcall(callback, currentVal) 
                         end
                     end
                 end)
                 
                 UIS.InputChanged:Connect(function(input)
                     if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        UpdateVisuals(input, false)
+                        UpdateVisualsAndCallback(input)
                     end
                 end)
             end
@@ -878,7 +876,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER: PROPERTY THROTTLE BYPASS
+            -- COLORPICKER: ABSOLUTE ZERO DELAY (0 MS THROTTLE)
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -997,11 +995,7 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                local lastVisualUpdate = 0
-                local function UpdateVisualsOnly(force)
-                    if not force and tick() - lastVisualUpdate < 0.08 then return end -- Throttled
-                    lastVisualUpdate = tick()
-                    
+                local function UpdateVisualsAndCallback()
                     local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
                     SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
@@ -1010,12 +1004,13 @@ function Library:CreateWindow(title, wmText)
                     HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
                     
                     if flag then Library.Flags[flag].Value = col end
-                    return col
+                    
+                    -- ZERO DELAY CALLBACK (INSTANT PRINT/UPDATE)
+                    pcall(callback, col)
                 end
 
                 if flag then Library.Flags[flag] = { Value = defaultColor } end
-                UpdateVisualsOnly(true)
-                pcall(callback, defaultColor)
+                UpdateVisualsAndCallback()
 
                 local isSatValDragging = false
                 local isHueDragging = false
@@ -1030,45 +1025,42 @@ function Library:CreateWindow(title, wmText)
                     else
                         RainbowBtn.Text = "Rainbow: ON"
                         RainbowBtn.TextColor3 = Library.Theme.Accent
-                        rainbowConnection = task.spawn(function()
-                            while true do
-                                currentHSV[1] = (tick() * 0.1) % 1 
-                                UpdateVisualsOnly(true) 
-                                task.wait(0.1) -- RAINBOW DELAYED TO 10 FPS (ANTI-CHEAT SAFE)
-                            end
+                        rainbowConnection = RunService.RenderStepped:Connect(function()
+                            currentHSV[1] = (tick() * 0.1) % 1 
+                            UpdateVisualsAndCallback()
                         end)
                     end
                 end)
 
-                local function UpdateSatVal(input, force)
+                local function UpdateSatVal(input)
                     if rainbowConnection then return end 
                     local sizeX, sizeY = SatValGrid.AbsoluteSize.X, SatValGrid.AbsoluteSize.Y
                     local posX = math.clamp(input.Position.X - SatValGrid.AbsolutePosition.X, 0, sizeX)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
                     currentHSV[2] = posX / sizeX
                     currentHSV[3] = 1 - (posY / sizeY)
-                    UpdateVisualsOnly(force)
+                    UpdateVisualsAndCallback()
                 end
 
                 SatValGrid.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isSatValDragging = true
-                        UpdateSatVal(input, true)
+                        UpdateSatVal(input)
                     end
                 end)
                 
-                local function UpdateHue(input, force)
+                local function UpdateHue(input)
                     if rainbowConnection then return end
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
-                    UpdateVisualsOnly(force)
+                    UpdateVisualsAndCallback()
                 end
 
                 HueBar.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isHueDragging = true
-                        UpdateHue(input, true)
+                        UpdateHue(input)
                     end
                 end)
 
@@ -1077,16 +1069,14 @@ function Library:CreateWindow(title, wmText)
                         if isSatValDragging or isHueDragging then
                             isSatValDragging = false
                             isHueDragging = false
-                            local finalCol = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
-                            pcall(callback, finalCol) 
                         end
                     end
                 end)
 
                 UIS.InputChanged:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                        if isSatValDragging then UpdateSatVal(input, false)
-                        elseif isHueDragging then UpdateHue(input, false) end
+                        if isSatValDragging then UpdateSatVal(input)
+                        elseif isHueDragging then UpdateHue(input) end
                     end
                 end)
             end
