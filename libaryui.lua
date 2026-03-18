@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V29 (MOBILE FIXES & PERFECT SECTION TITLE ALIGNMENT)
+-- BYMAX UI LIBRARY - V30 (MOBILE FIXES & OPAQUE TITLE FIX)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -158,15 +158,10 @@ function Library:CreateWindow(title, wmText)
     MainFrame.Parent = ScreenGui
     Instance.new("UIStroke", MainFrame).Color = Library.Theme.Border
     
-    -- ========================================================
-    -- MOBILE FIX: Tighter sizing for phone screens
-    -- ========================================================
     if isMobile then
         MainFrame.Size = UDim2.new(0, 380, 0, 280)
         MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140)
-    end
-
-    if isMobile then
+        
         local MobileToggleBtn = Instance.new("TextButton")
         MobileToggleBtn.Name = "MobileToggle"
         MobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -182,9 +177,15 @@ function Library:CreateWindow(title, wmText)
         Instance.new("UICorner", MobileToggleBtn).CornerRadius = UDim.new(0, 8)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
         
-        -- FIX: Toggle MainFrame visibility instead of ScreenGui enabled
-        MobileToggleBtn.Activated:Connect(function() 
+        -- FIX: MouseButton1Click for reliable mobile touch
+        MobileToggleBtn.MouseButton1Click:Connect(function() 
             MainFrame.Visible = not MainFrame.Visible 
+        end)
+    else
+        UIS.InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed and input.KeyCode == WindowData.MenuBind then
+                MainFrame.Visible = not MainFrame.Visible
+            end
         end)
     end
 
@@ -241,7 +242,7 @@ function Library:CreateWindow(title, wmText)
     KeybindListBG.AutomaticSize = Enum.AutomaticSize.Y
     KeybindListBG.Active = true
     KeybindListBG.Draggable = true
-    KeybindListBG.Visible = not isMobile 
+    KeybindListBG.Visible = not isMobile -- Hidden on mobile
     KeybindListBG.Parent = ScreenGui
     Library.KeybindList = KeybindListBG 
     Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
@@ -305,12 +306,6 @@ function Library:CreateWindow(title, wmText)
         activeKeybinds[name].Text = string.format("[%s] %s", key, name)
         activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(110, 110, 110)
     end
-
-    UIS.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == WindowData.MenuBind then
-            MainFrame.Visible = not MainFrame.Visible
-        end
-    end)
 
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 25)
@@ -431,60 +426,43 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
+            local GBLine = Instance.new("Frame")
+            GBLine.Size = UDim2.new(1, 0, 0, 1) 
+            GBLine.BackgroundColor3 = Library.Theme.Accent
+            GBLine.BorderSizePixel = 0
+            GBLine.Parent = GroupBox
+            
             -- ========================================================
-            -- TITLE ALIGNMENT FIX: UIListLayout guarantees no overlap
+            -- TITLE FIX: OPAQUE BACKGROUND TO HIDE LINE (NO GAPS)
             -- ========================================================
-            local TopBorder = Instance.new("Frame")
-            TopBorder.Size = UDim2.new(1, 0, 0, 14)
-            TopBorder.Position = UDim2.new(0, 0, 0, -7) -- Centered perfectly on the border line
-            TopBorder.BackgroundTransparency = 1
-            TopBorder.Parent = GroupBox
+            local TitleCont = Instance.new("Frame")
+            TitleCont.AutomaticSize = Enum.AutomaticSize.X 
+            TitleCont.Size = UDim2.new(0, 0, 0, 14) 
+            TitleCont.Position = UDim2.new(0, 12, 0, -7) 
+            TitleCont.BackgroundColor3 = Library.Theme.DarkBG -- MASKING THE LINE!
+            TitleCont.BorderSizePixel = 0
+            TitleCont.ZIndex = 5 
+            TitleCont.Parent = GroupBox
 
-            local TopLayout = Instance.new("UIListLayout")
-            TopLayout.FillDirection = Enum.FillDirection.Horizontal
-            TopLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            TopLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-            TopLayout.Parent = TopBorder
+            Instance.new("UIPadding", TitleCont).PaddingLeft = UDim.new(0, 4)
+            TitleCont.UIPadding.PaddingRight = UDim.new(0, 4)
 
-            local GBLineL = Instance.new("Frame")
-            GBLineL.Size = UDim2.new(0, 10, 0, 1)
-            GBLineL.BackgroundColor3 = Library.Theme.Accent
-            GBLineL.BorderSizePixel = 0
-            GBLineL.LayoutOrder = 1
-            GBLineL.Parent = TopBorder
+            local cleanName = gbName
+            if #cleanName > 30 then cleanName = cleanName:sub(1,27).."..." end
 
             local GBTitle = Instance.new("TextLabel")
-            GBTitle.AutomaticSize = Enum.AutomaticSize.X
-            GBTitle.Size = UDim2.new(0, 0, 1, 0)
+            GBTitle.Size = UDim2.new(1, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = " " .. gbName .. " "
+            GBTitle.Text = cleanName
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
-            GBTitle.LayoutOrder = 2
-            GBTitle.Parent = TopBorder
-
-            -- Restrict title size so it doesn't break the right side
-            local MaxWidth = Instance.new("UISizeConstraint")
-            MaxWidth.MaxSize = Vector2.new(140, 9999) 
-            MaxWidth.Parent = GBTitle
-            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd
-
-            local GBLineR = Instance.new("Frame")
-            GBLineR.BackgroundColor3 = Library.Theme.Accent
-            GBLineR.BorderSizePixel = 0
-            GBLineR.LayoutOrder = 3
-            GBLineR.Parent = TopBorder
-
-            -- Dynamically size the right line
-            local function UpdateRightLine()
-                local occupiedSpace = 10 + GBTitle.AbsoluteSize.X
-                GBLineR.Size = UDim2.new(1, -occupiedSpace, 0, 1)
-            end
-            GBTitle:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateRightLine)
-            task.spawn(function() RunService.RenderStepped:Wait() UpdateRightLine() end)
+            GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
+            GBTitle.ZIndex = 6
+            GBTitle.Parent = TitleCont
 
             -- ========================================================
+
             local ItemContainer = Instance.new("Frame")
             ItemContainer.Size = UDim2.new(1, 0, 0, 0)
             ItemContainer.Position = UDim2.new(0, 0, 0, 8) 
@@ -666,19 +644,13 @@ function Library:CreateWindow(title, wmText)
                             UpdateKeybindList(name, bind, state)
                             isListening = false
                         elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                            if isHold then
-                                Fire(true)
-                            else
-                                Fire()
-                            end
+                            if isHold then Fire(true) else Fire() end
                         end
                     end)
 
                     UIS.InputEnded:Connect(function(input, gameProcessed)
                         if not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                            if isHold then
-                                Fire(false)
-                            end
+                            if isHold then Fire(false) end
                         end
                     end)
                 end
@@ -1099,7 +1071,16 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
+            -- ========================================================
+            -- MOBILE FIX: Keybinds convert to Toggles on mobile
+            -- ========================================================
             function GBData:CreateKeybind(options)
+                if isMobile then
+                    -- Convert standalone keybind to a toggle button on mobile
+                    options.Default = false
+                    return GBData:CreateToggle(options)
+                end
+
                 local name = options.Name or "Keybind"
                 local bind = options.Default
                 local callback = options.Callback or function() end
