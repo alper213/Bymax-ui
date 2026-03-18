@@ -1,6 +1,5 @@
--- ==============================================================================
--- BYMAX UI LIBRARY - OFFICIAL MASTERCLASS EXAMPLE (V28 FINAL)
--- ==============================================================================
+--frist turkey ui libary or idk have or no i madede on turkey
+
 -- Bu script, kütüphanenin tüm özelliklerini nasıl kullanacağınızı öğretir.
 -- Her bölüm yorum satırlarıyla (comments) açıklanmıştır.
 -- ==============================================================================
