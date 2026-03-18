@@ -5,18 +5,27 @@ roblox ui libary
 
 Bymax UI is a high-performance, lightweight interface library designed specifically for Roblox scripters. This version focuses on eliminating alignment bugs, ensuring mobile compatibility, and preventing executor-level crashes common in other libraries.
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/image.png" width="300" />
-  <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/34ac183c-307a-4f79-b9cc-55fbce9c46ba.jpg" width="300" />
-</div>
+<table>
+  <tr>
+    <td align="left">
+      <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/image.png" width="300"/>
+    </td>
+    <td align="center">
+      
 ## Key Technical Features
 
-* **Mobile Optimization:** Optimized touch-target areas for sliders, buttons, and dropdowns.
-* **Tweened Notifications:** Custom notification system with smooth slide animations.
-* **Anti-Crash Logic:** Bypasses problematic folder creation methods to ensure stability across all executors. Saves data as .txt in the root workspace.
-* **Hold-to-Use Logic:** Integrated support for toggles that only activate while a key is held down.
-* **Premium Aesthetics:** Dynamic borders that adjust to title length and active tab indicators.
+- **Mobile Optimization:** Optimized touch-target areas for sliders, buttons, and dropdowns.  
+- **Tweened Notifications:** Custom notification system with smooth slide animations.  
+- **Anti-Crash Logic:** Ensures stability across all executors.  
+- **Hold-to-Use Logic:** Toggles activate only while key is held.  
+- **Premium Aesthetics:** Dynamic borders and active tab indicators.
 
+    </td>
+    <td align="right">
+      <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/34ac183c-307a-4f79-b9cc-55fbce9c46ba.jpg" width="300"/>
+    </td>
+  </tr>
+</table>
 
 
 ## Installation
