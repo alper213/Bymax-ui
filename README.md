@@ -22,7 +22,7 @@ Bymax UI is a high-performance, lightweight interface library designed specifica
 
     </td>
     <td align="right">
-      <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/34ac183c-307a-4f79-b9cc-55fbce9c46ba.jpg" width="300"/>
+      <img src="https://raw.githubusercontent.com/alper213/Bymax-ui/main/%C4%B0mages/34ac183c-307a-4f79-b9cc-55fbce9c46ba.jpg" width="600"/>
     </td>
   </tr>
 </table>
