@@ -1,4 +1,6 @@
-
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V33 (DEBOUNCE ANTI-CHEAT BYPASS FOR MOBILE)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -649,7 +651,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- SLIDER ANTI-CHEAT BYPASS: ONLY FIRES ON RELEASE
+            -- SLIDER DEBOUNCE (ANTI-CHEAT SAFE)
             -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
@@ -705,6 +707,14 @@ function Library:CreateWindow(title, wmText)
 
                 local isDragging = false
                 local currentVal = current
+                local debounceTimer = nil
+                
+                local function FireSafeCallback(val)
+                    if debounceTimer then task.cancel(debounceTimer) end
+                    debounceTimer = task.delay(0.2, function()
+                        pcall(callback, val)
+                    end)
+                end
                 
                 local function UpdateVisuals(input)
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
@@ -721,6 +731,7 @@ function Library:CreateWindow(title, wmText)
                     ValLabel.Text = string.format(formatString, currentVal, max)
                     
                     if flag then Library.Flags[flag].Value = currentVal end
+                    FireSafeCallback(currentVal)
                 end
                 
                 BG.InputBegan:Connect(function(input)
@@ -730,13 +741,9 @@ function Library:CreateWindow(title, wmText)
                     end
                 end)
                 
-                -- Stealth Mode: Send data ONLY when finger is lifted
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if isDragging then
-                            isDragging = false
-                            pcall(callback, currentVal) 
-                        end
+                        isDragging = false
                     end
                 end)
                 
@@ -877,7 +884,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER ANTI-CHEAT BYPASS
+            -- COLORPICKER DEBOUNCE (ANTI-CHEAT SAFE)
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -997,6 +1004,14 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
+                local debounceTimer = nil
+                local function FireSafeCallback(col)
+                    if debounceTimer then task.cancel(debounceTimer) end
+                    debounceTimer = task.delay(0.25, function()
+                        pcall(callback, col)
+                    end)
+                end
+
                 local function SetColorVisualsOnly()
                     local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
@@ -1028,11 +1043,11 @@ function Library:CreateWindow(title, wmText)
                         RainbowBtn.Text = "Rainbow: ON"
                         RainbowBtn.TextColor3 = Library.Theme.Accent
                         rainbowConnection = RunService.RenderStepped:Connect(function()
-                            currentHSV[1] = (tick() * 0.2) % 1 
+                            currentHSV[1] = (tick() * 0.1) % 1 -- Daha yavaş pürüzsüz rainbow
                             local c = SetColorVisualsOnly()
                             
-                            -- Throttle Rainbow: Only send to server 4 times a second (0.25s)
-                            if tick() - rainbowLastCall > 0.25 then
+                            -- Rainbow açıkken anti-cheat çıldırmasın diye saniyede 1 kez veri gönderir
+                            if tick() - rainbowLastCall > 1 then
                                 pcall(callback, c)
                                 rainbowLastCall = tick()
                             end
@@ -1047,7 +1062,8 @@ function Library:CreateWindow(title, wmText)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
                     currentHSV[2] = posX / sizeX
                     currentHSV[3] = 1 - (posY / sizeY)
-                    SetColorVisualsOnly()
+                    local newCol = SetColorVisualsOnly()
+                    FireSafeCallback(newCol)
                 end
 
                 SatValGrid.InputBegan:Connect(function(input)
@@ -1062,7 +1078,8 @@ function Library:CreateWindow(title, wmText)
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
-                    SetColorVisualsOnly()
+                    local newCol = SetColorVisualsOnly()
+                    FireSafeCallback(newCol)
                 end
 
                 HueBar.InputBegan:Connect(function(input)
@@ -1072,15 +1089,10 @@ function Library:CreateWindow(title, wmText)
                     end
                 end)
 
-                -- Stealth Mode: Send data ONLY when finger is lifted
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        if isSatValDragging or isHueDragging then
-                            isSatValDragging = false
-                            isHueDragging = false
-                            local finalCol = SetColorVisualsOnly()
-                            pcall(callback, finalCol) 
-                        end
+                        isSatValDragging = false
+                        isHueDragging = false
                     end
                 end)
 
