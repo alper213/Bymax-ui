@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BYMAX UI LIBRARY - V31 (ANTI-CHEAT THROTTLE FIX FOR MOBILE)
+-- BYMAX UI LIBRARY - V32 (ABSOLUTE STEALTH / ANTI-CHEAT BYPASS)
 -- ==============================================================================
 local Library = {
     Flags = {}, 
@@ -232,6 +232,79 @@ function Library:CreateWindow(title, wmText)
             frames = 0
         end
     end)
+
+    local KeybindListBG = Instance.new("Frame")
+    KeybindListBG.Size = UDim2.new(0, 200, 0, 0)
+    KeybindListBG.Position = UDim2.new(0, 15, 0.4, 0)
+    KeybindListBG.BackgroundColor3 = Library.Theme.DarkBG
+    KeybindListBG.BorderSizePixel = 0
+    KeybindListBG.AutomaticSize = Enum.AutomaticSize.Y
+    KeybindListBG.Active = true
+    KeybindListBG.Draggable = true
+    KeybindListBG.Visible = not isMobile 
+    KeybindListBG.Parent = ScreenGui
+    Library.KeybindList = KeybindListBG 
+    Instance.new("UIStroke", KeybindListBG).Color = Library.Theme.Border
+
+    local KLTopLine = Instance.new("Frame")
+    KLTopLine.Size = UDim2.new(1, 0, 0, 2)
+    KLTopLine.BackgroundColor3 = Library.Theme.Accent
+    KLTopLine.BorderSizePixel = 0
+    KLTopLine.Parent = KeybindListBG
+
+    local KLTitle = Instance.new("TextLabel")
+    KLTitle.Size = UDim2.new(1, 0, 0, 22)
+    KLTitle.Position = UDim2.new(0, 0, 0, 2)
+    KLTitle.BackgroundTransparency = 1
+    KLTitle.Text = "Keybinds"
+    KLTitle.TextColor3 = Library.Theme.Text
+    KLTitle.Font = Enum.Font.Code
+    KLTitle.TextSize = 12
+    KLTitle.Parent = KeybindListBG
+
+    local KLDivider = Instance.new("Frame")
+    KLDivider.Size = UDim2.new(1, 0, 0, 1)
+    KLDivider.Position = UDim2.new(0, 0, 0, 24)
+    KLDivider.BackgroundColor3 = Library.Theme.Border
+    KLDivider.BorderSizePixel = 0
+    KLDivider.Parent = KeybindListBG
+
+    local KLContainer = Instance.new("Frame")
+    KLContainer.Size = UDim2.new(1, 0, 0, 0)
+    KLContainer.Position = UDim2.new(0, 0, 0, 25)
+    KLContainer.BackgroundTransparency = 1
+    KLContainer.AutomaticSize = Enum.AutomaticSize.Y
+    KLContainer.Parent = KeybindListBG
+    
+    local KLLayout = Instance.new("UIListLayout")
+    KLLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    KLLayout.Padding = UDim.new(0, 2)
+    KLLayout.Parent = KLContainer
+    
+    local KLPadding = Instance.new("UIPadding")
+    KLPadding.PaddingTop = UDim.new(0, 6)
+    KLPadding.PaddingBottom = UDim.new(0, 6)
+    KLPadding.PaddingLeft = UDim.new(0, 8)
+    KLPadding.PaddingRight = UDim.new(0, 8)
+    KLPadding.Parent = KLContainer
+
+    local activeKeybinds = {}
+    local function UpdateKeybindList(name, key, state)
+        if isMobile then return end 
+        if not key or key == "" then return end
+        if not activeKeybinds[name] then
+            local item = Instance.new("TextLabel")
+            item.Size = UDim2.new(1, 0, 0, 14)
+            item.BackgroundTransparency = 1
+            item.Font = Enum.Font.Code
+            item.TextSize = 11
+            item.TextXAlignment = Enum.TextXAlignment.Left
+            item.Parent = KLContainer
+            activeKeybinds[name] = item
+        end
+        activeKeybinds[name].Text = string.format("[%s] %s", key, name)
+        activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(110, 110, 110)
+    end
 
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 25)
@@ -524,9 +597,11 @@ function Library:CreateWindow(title, wmText)
                     end
                     if flag then Library.Flags[flag].Value = state end
                     CheckBox.BackgroundColor3 = state and Library.Theme.Accent or Library.Theme.ItemBG
+                    if bind then UpdateKeybindList(name, bind, state) end
                     pcall(callback, state)
                 end
 
+                if bind then UpdateKeybindList(name, bind, state) end
                 if state then pcall(callback, state) end
 
                 MainBtn.Activated:Connect(function()
@@ -560,6 +635,7 @@ function Library:CreateWindow(title, wmText)
                                 bind = input.KeyCode.Name
                                 BindBtn.Text = "[" .. bind .. "]"
                             end
+                            UpdateKeybindList(name, bind, state)
                             isListening = false
                         elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
                             if isHold then Fire(true) else Fire() end
@@ -575,7 +651,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- SLIDER ANTI-CHEAT THROTTLE (MAX 20 FPS NETWORK)
+            -- SLIDER ANTI-CHEAT BYPASS: ONLY FIRES ON RELEASE
             -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
@@ -630,10 +706,9 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
-                local lastCallback = 0
                 local currentVal = current
                 
-                local function Update(input, force)
+                local function UpdateVisuals(input)
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
                     local sliderPos = BG.AbsolutePosition.X
                     local sliderSize = BG.AbsoluteSize.X
@@ -648,33 +723,28 @@ function Library:CreateWindow(title, wmText)
                     ValLabel.Text = string.format(formatString, currentVal, max)
                     
                     if flag then Library.Flags[flag].Value = currentVal end
-                    
-                    -- Throttle logic: Prevents anti-cheat kicks on mobile
-                    if force or (tick() - lastCallback > 0.05) then
-                        pcall(callback, currentVal)
-                        lastCallback = tick()
-                    end
                 end
                 
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
-                        Update(input, false)
+                        UpdateVisuals(input)
                     end
                 end)
                 
+                -- Stealth Mode: Send data ONLY when finger is lifted
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         if isDragging then
                             isDragging = false
-                            pcall(callback, currentVal) -- Force final update
+                            pcall(callback, currentVal) 
                         end
                     end
                 end)
                 
                 UIS.InputChanged:Connect(function(input)
                     if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        Update(input, false)
+                        UpdateVisuals(input)
                     end
                 end)
             end
@@ -809,7 +879,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER ANTI-CHEAT THROTTLE (MAX 20 FPS NETWORK)
+            -- COLORPICKER ANTI-CHEAT BYPASS
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -929,8 +999,7 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                local lastCallback = 0
-                local function SetColor(force)
+                local function SetColorVisualsOnly()
                     local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
                     SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
@@ -939,20 +1008,17 @@ function Library:CreateWindow(title, wmText)
                     HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
                     
                     if flag then Library.Flags[flag].Value = col end
-                    
-                    -- Throttle logic: Prevents anti-cheat kicks on mobile
-                    if force or (tick() - lastCallback > 0.05) then
-                        pcall(callback, col)
-                        lastCallback = tick()
-                    end
+                    return col
                 end
 
                 if flag then Library.Flags[flag] = { Value = defaultColor } end
-                SetColor(true)
+                local initialCol = SetColorVisualsOnly()
+                pcall(callback, initialCol)
 
                 local isSatValDragging = false
                 local isHueDragging = false
                 local rainbowConnection = nil
+                local rainbowLastCall = 0
 
                 RainbowBtn.Activated:Connect(function()
                     if rainbowConnection then
@@ -965,7 +1031,13 @@ function Library:CreateWindow(title, wmText)
                         RainbowBtn.TextColor3 = Library.Theme.Accent
                         rainbowConnection = RunService.RenderStepped:Connect(function()
                             currentHSV[1] = (tick() * 0.2) % 1 
-                            SetColor(false)
+                            local c = SetColorVisualsOnly()
+                            
+                            -- Throttle Rainbow: Only send to server 4 times a second (0.25s)
+                            if tick() - rainbowLastCall > 0.25 then
+                                pcall(callback, c)
+                                rainbowLastCall = tick()
+                            end
                         end)
                     end
                 end)
@@ -977,7 +1049,7 @@ function Library:CreateWindow(title, wmText)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
                     currentHSV[2] = posX / sizeX
                     currentHSV[3] = 1 - (posY / sizeY)
-                    SetColor(false)
+                    SetColorVisualsOnly()
                 end
 
                 SatValGrid.InputBegan:Connect(function(input)
@@ -992,7 +1064,7 @@ function Library:CreateWindow(title, wmText)
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
-                    SetColor(false)
+                    SetColorVisualsOnly()
                 end
 
                 HueBar.InputBegan:Connect(function(input)
@@ -1002,12 +1074,14 @@ function Library:CreateWindow(title, wmText)
                     end
                 end)
 
+                -- Stealth Mode: Send data ONLY when finger is lifted
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging or isHueDragging then
                             isSatValDragging = false
                             isHueDragging = false
-                            SetColor(true) -- Force final update
+                            local finalCol = SetColorVisualsOnly()
+                            pcall(callback, finalCol) 
                         end
                     end
                 end)
@@ -1020,9 +1094,6 @@ function Library:CreateWindow(title, wmText)
                 end)
             end
 
-            -- ========================================================
-            -- MOBILE FIX: Keybinds convert to Toggles on mobile
-            -- ========================================================
             function GBData:CreateKeybind(options)
                 if isMobile then
                     options.Default = false
