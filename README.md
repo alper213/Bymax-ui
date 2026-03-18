@@ -22,7 +22,7 @@ Bymax UI is a high-performance, lightweight interface library designed specifica
 To load the library into your script, use the following code block:
 
 ```lua
-local Library = loadstring(game:HttpGet("[https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua](https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua)"))()
+local Library = loadstring(game:HttpGet("(https://github.com/alper213/Bymax-ui/raw/refs/heads/main/libaryui.lua)"))()
 local Window = Library:CreateWindow("Bymax Universal Hub", "Beta Premium")
 ```
 
