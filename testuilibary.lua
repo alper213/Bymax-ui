@@ -1,6 +1,3 @@
--- ==============================================================================
--- BYMAX UI LIBRARY - V33 (DEBOUNCE ANTI-CHEAT BYPASS FOR MOBILE)
--- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -32,9 +29,6 @@ for _, v in pairs(TargetParent:GetChildren()) do
     if v.Name == "BymaxUILib" then v:Destroy() end
 end
 
--- ==============================================================================
--- SMOOTH NOTIFICATION SYSTEM 
--- ==============================================================================
 local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "BymaxNotif"
 NotifGui.Parent = TargetParent
@@ -129,9 +123,6 @@ function Library:Notify(title, text, duration)
     end)
 end
 
--- ==============================================================================
--- MAIN LIBRARY CORE
--- ==============================================================================
 function Library:CreateWindow(title, wmText)
     local WindowData = {}
     WindowData.MenuBind = Enum.KeyCode.RightShift
@@ -579,7 +570,7 @@ function Library:CreateWindow(title, wmText)
                 local Lbl = Instance.new("TextLabel")
                 Lbl.Size = UDim2.new(1, -20, 1, 0)
                 Lbl.Position = UDim2.new(0, 20, 0, 0)
-                Lbl.BackgroundTransparency = 1
+                BackgroundTransparency = 1
                 Lbl.Text = name
                 Lbl.TextColor3 = Library.Theme.Text
                 Lbl.Font = Enum.Font.Code
@@ -650,9 +641,6 @@ function Library:CreateWindow(title, wmText)
                 end
             end
 
-            -- ========================================================
-            -- SLIDER DEBOUNCE (ANTI-CHEAT SAFE)
-            -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
                 local min = options.Min or 0
@@ -707,14 +695,6 @@ function Library:CreateWindow(title, wmText)
 
                 local isDragging = false
                 local currentVal = current
-                local debounceTimer = nil
-                
-                local function FireSafeCallback(val)
-                    if debounceTimer then task.cancel(debounceTimer) end
-                    debounceTimer = task.delay(0.2, function()
-                        pcall(callback, val)
-                    end)
-                end
                 
                 local function UpdateVisuals(input)
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
@@ -731,7 +711,6 @@ function Library:CreateWindow(title, wmText)
                     ValLabel.Text = string.format(formatString, currentVal, max)
                     
                     if flag then Library.Flags[flag].Value = currentVal end
-                    FireSafeCallback(currentVal)
                 end
                 
                 BG.InputBegan:Connect(function(input)
@@ -743,7 +722,10 @@ function Library:CreateWindow(title, wmText)
                 
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isDragging = false
+                        if isDragging then
+                            isDragging = false
+                            pcall(callback, currentVal) 
+                        end
                     end
                 end)
                 
@@ -884,7 +866,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER DEBOUNCE (ANTI-CHEAT SAFE)
+            -- COLORPICKER: LOKAL GÖRSEL + SADECE INPUT ENDED CALLBACK
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -1004,15 +986,8 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                local debounceTimer = nil
-                local function FireSafeCallback(col)
-                    if debounceTimer then task.cancel(debounceTimer) end
-                    debounceTimer = task.delay(0.25, function()
-                        pcall(callback, col)
-                    end)
-                end
-
-                local function SetColorVisualsOnly()
+                -- SADECE MENÜDE GÖRSEL OLARAK RENK DEĞİŞTİRİR (CALLBACK YOK)
+                local function UpdateVisualsOnly()
                     local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
                     ColorDisplay.BackgroundColor3 = col
                     SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
@@ -1021,17 +996,15 @@ function Library:CreateWindow(title, wmText)
                     HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
                     
                     if flag then Library.Flags[flag].Value = col end
-                    return col
                 end
 
                 if flag then Library.Flags[flag] = { Value = defaultColor } end
-                local initialCol = SetColorVisualsOnly()
-                pcall(callback, initialCol)
+                UpdateVisualsOnly()
+                pcall(callback, defaultColor) -- Başlangıçta 1 kere çalışır
 
                 local isSatValDragging = false
                 local isHueDragging = false
                 local rainbowConnection = nil
-                local rainbowLastCall = 0
 
                 RainbowBtn.Activated:Connect(function()
                     if rainbowConnection then
@@ -1043,14 +1016,9 @@ function Library:CreateWindow(title, wmText)
                         RainbowBtn.Text = "Rainbow: ON"
                         RainbowBtn.TextColor3 = Library.Theme.Accent
                         rainbowConnection = RunService.RenderStepped:Connect(function()
-                            currentHSV[1] = (tick() * 0.1) % 1 -- Daha yavaş pürüzsüz rainbow
-                            local c = SetColorVisualsOnly()
-                            
-                            -- Rainbow açıkken anti-cheat çıldırmasın diye saniyede 1 kez veri gönderir
-                            if tick() - rainbowLastCall > 1 then
-                                pcall(callback, c)
-                                rainbowLastCall = tick()
-                            end
+                            currentHSV[1] = (tick() * 0.2) % 1 
+                            UpdateVisualsOnly() 
+                            -- BURADA CALLBACK YOK! RAINBOW SADECE MENÜDE ÇALIŞIR.
                         end)
                     end
                 end)
@@ -1062,8 +1030,7 @@ function Library:CreateWindow(title, wmText)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
                     currentHSV[2] = posX / sizeX
                     currentHSV[3] = 1 - (posY / sizeY)
-                    local newCol = SetColorVisualsOnly()
-                    FireSafeCallback(newCol)
+                    UpdateVisualsOnly()
                 end
 
                 SatValGrid.InputBegan:Connect(function(input)
@@ -1078,8 +1045,7 @@ function Library:CreateWindow(title, wmText)
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
-                    local newCol = SetColorVisualsOnly()
-                    FireSafeCallback(newCol)
+                    UpdateVisualsOnly()
                 end
 
                 HueBar.InputBegan:Connect(function(input)
@@ -1089,10 +1055,15 @@ function Library:CreateWindow(title, wmText)
                     end
                 end)
 
+                -- PARMAK ÇEKİLDİĞİNDE SADECE 1 KEZ VERİ GÖNDERİLİR
                 UIS.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        isSatValDragging = false
-                        isHueDragging = false
+                        if isSatValDragging or isHueDragging then
+                            isSatValDragging = false
+                            isHueDragging = false
+                            local finalCol = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
+                            pcall(callback, finalCol) 
+                        end
                     end
                 end)
 
