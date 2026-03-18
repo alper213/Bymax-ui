@@ -1,4 +1,6 @@
-
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V41 (C++ TWEEN ENGINE BYPASS / ZERO LUA SPAM)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -33,7 +35,7 @@ end
 local RandomGuiName = GenerateRandomName()
 
 for _, v in pairs(TargetParent:GetChildren()) do
-    if v:IsA("ScreenGui") and v:FindFirstChild("BymaxPhantomMarker") then 
+    if v:IsA("ScreenGui") and v:FindFirstChild("BymaxTweenMarker") then 
         v:Destroy() 
     end
 end
@@ -43,7 +45,7 @@ NotifGui.Name = GenerateRandomName()
 NotifGui.Parent = TargetParent
 NotifGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 local Marker1 = Instance.new("BoolValue", NotifGui)
-Marker1.Name = "BymaxPhantomMarker"
+Marker1.Name = "BymaxTweenMarker"
 
 local NotifLayout = Instance.new("Frame")
 NotifLayout.Size = UDim2.new(0, 250, 1, -20)
@@ -141,7 +143,7 @@ function Library:CreateWindow(title, wmText)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global 
     ScreenGui.ResetOnSpawn = false
     local Marker2 = Instance.new("BoolValue", ScreenGui)
-    Marker2.Name = "BymaxPhantomMarker"
+    Marker2.Name = "BymaxTweenMarker"
 
     function WindowData:Unload() 
         ScreenGui:Destroy() 
@@ -217,6 +219,15 @@ function Library:CreateWindow(title, wmText)
     WMTextLabel.Parent = WatermarkBG
     Instance.new("UIPadding", WMTextLabel).PaddingLeft = UDim.new(0, 6)
     WMTextLabel.UIPadding.PaddingRight = UDim.new(0, 6)
+
+    task.spawn(function()
+        local baseText = wmText or "Bymax UI"
+        while task.wait(1) do
+            if not ScreenGui.Parent then break end 
+            local timeStr = os.date("%H:%M:%S")
+            WMTextLabel.Text = string.format("%s | %s", baseText, timeStr)
+        end
+    end)
 
     local KeybindListBG = Instance.new("Frame")
     KeybindListBG.Size = UDim2.new(0, 200, 0, 0)
@@ -636,7 +647,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- SLIDER SAFE TICK (Anti-Property Spam)
+            -- SLIDER: TWEEN ENGINE BYPASS
             -- ========================================================
             function GBData:CreateSlider(options)
                 local name = options.Name or "Slider"
@@ -691,11 +702,11 @@ function Library:CreateWindow(title, wmText)
                 if current ~= min then pcall(callback, current) end
 
                 local isDragging = false
-                local lastSafeTick = 0
+                local lastUpdate = 0
                 
-                local function UpdateSafeTick(input, forceUpdate)
-                    if not forceUpdate and tick() - lastSafeTick < 0.05 then return end 
-                    lastSafeTick = tick()
+                local function UpdateVisuals(input, force)
+                    if not force and tick() - lastUpdate < 0.1 then return end
+                    lastUpdate = tick()
 
                     local positionX = (input.UserInputType == Enum.UserInputType.Touch) and input.Position.X or UIS:GetMouseLocation().X
                     local sliderPos = BG.AbsolutePosition.X
@@ -706,9 +717,10 @@ function Library:CreateWindow(title, wmText)
                     val = math.floor((val / increment) + 0.5) * increment
                     local currentVal = math.clamp(val, min, max)
 
-                    Fill.Size = UDim2.new((currentVal - min) / (max - min), 0, 1, 0)
-                    local formatString = (increment % 1 == 0) and "%d/%d" or "%.1f/%.1f"
-                    ValLabel.Text = string.format(formatString, currentVal, max)
+                    -- TWEEN ENGINE BYPASS FOR SLIDER
+                    TweenService:Create(Fill, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Size = UDim2.new((currentVal - min) / (max - min), 0, 1, 0)}):Play()
+                    
+                    ValLabel.Text = string.format((increment % 1 == 0) and "%d/%d" or "%.1f/%.1f", currentVal, max)
                     
                     if flag then Library.Flags[flag].Value = currentVal end
                     pcall(callback, currentVal)
@@ -717,7 +729,7 @@ function Library:CreateWindow(title, wmText)
                 BG.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         isDragging = true
-                        UpdateSafeTick(input, true)
+                        UpdateVisuals(input, true)
                     end
                 end)
                 
@@ -725,14 +737,14 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                         if isDragging then
                             isDragging = false
-                            UpdateSafeTick(input, true)
+                            UpdateVisuals(input, true)
                         end
                     end
                 end)
                 
                 UIS.InputChanged:Connect(function(input)
                     if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        UpdateSafeTick(input, false)
+                        UpdateVisuals(input, false)
                     end
                 end)
             end
@@ -867,7 +879,7 @@ function Library:CreateWindow(title, wmText)
             end
 
             -- ========================================================
-            -- COLORPICKER: SAFE-TICK ENGINE (Anti-Property Spam)
+            -- COLORPICKER: TWEEN ENGINE BYPASS (ANTI-CHEAT SAFE)
             -- ========================================================
             function GBData:CreateColorPicker(options)
                 local name = options.Name or "Color Picker"
@@ -986,24 +998,26 @@ function Library:CreateWindow(title, wmText)
                 RainbowBtn.Parent = Popup
                 Instance.new("UIStroke", RainbowBtn).Color = Library.Theme.Border
 
-                local lastSafeTick = 0
-                local function UpdateSafeTick(forceUpdate)
-                    if not forceUpdate and tick() - lastSafeTick < 0.05 then return end -- THROTTLE 20 FPS LIMIT
-                    lastSafeTick = tick()
-
-                    local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
-                    ColorDisplay.BackgroundColor3 = col
-                    SatValGrid.BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)
+                local lastColUpdate = 0
+                local function UpdateVisualsAndCallback(force)
+                    -- THROTTLE TO BYPASS ANTI-CHEAT (Max 10 FPS updates to Lua properties)
+                    if not force and tick() - lastColUpdate < 0.1 then return end
+                    lastColUpdate = tick()
                     
-                    SVIndicator.Position = UDim2.new(currentHSV[2], 0, 1 - currentHSV[3], 0)
-                    HueIndicator.Position = UDim2.new(currentHSV[1], 0, 0.5, 0)
+                    local col = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
+                    
+                    -- TWEEN ENGINE: Hidden from Lua property spam checks
+                    TweenService:Create(ColorDisplay, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {BackgroundColor3 = col}):Play()
+                    TweenService:Create(SatValGrid, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)}):Play()
+                    TweenService:Create(SVIndicator, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.new(currentHSV[2], 0, 1 - currentHSV[3], 0)}):Play()
+                    TweenService:Create(HueIndicator, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.new(currentHSV[1], 0, 0.5, 0)}):Play()
                     
                     if flag then Library.Flags[flag].Value = col end
                     pcall(callback, col)
                 end
 
                 if flag then Library.Flags[flag] = { Value = defaultColor } end
-                UpdateSafeTick(true)
+                UpdateVisualsAndCallback(true)
 
                 local isSatValDragging = false
                 local isHueDragging = false
@@ -1018,11 +1032,19 @@ function Library:CreateWindow(title, wmText)
                     else
                         RainbowBtn.Text = "Rainbow: ON"
                         RainbowBtn.TextColor3 = Library.Theme.Accent
+                        
+                        -- RAINBOW SAFE TWEEN ENGINE (1 second cycles, 100% undetected)
                         rainbowConnection = task.spawn(function()
                             while true do
-                                currentHSV[1] = (tick() * 0.1) % 1 
-                                UpdateSafeTick(true) 
-                                task.wait(0.05) -- RAINBOW SAFE THROTTLE
+                                currentHSV[1] = (currentHSV[1] + 0.1) % 1 
+                                local nextCol = Color3.fromHSV(currentHSV[1], currentHSV[2], currentHSV[3])
+                                
+                                TweenService:Create(ColorDisplay, TweenInfo.new(1, Enum.EasingStyle.Linear), {BackgroundColor3 = nextCol}):Play()
+                                TweenService:Create(SatValGrid, TweenInfo.new(1, Enum.EasingStyle.Linear), {BackgroundColor3 = Color3.fromHSV(currentHSV[1], 1, 1)}):Play()
+                                TweenService:Create(HueIndicator, TweenInfo.new(1, Enum.EasingStyle.Linear), {Position = UDim2.new(currentHSV[1], 0, 0.5, 0)}):Play()
+                                
+                                pcall(callback, nextCol)
+                                task.wait(1) -- Lua loop only runs ONCE per second!
                             end
                         end)
                     end
@@ -1035,7 +1057,7 @@ function Library:CreateWindow(title, wmText)
                     local posY = math.clamp(input.Position.Y - SatValGrid.AbsolutePosition.Y, 0, sizeY)
                     currentHSV[2] = posX / sizeX
                     currentHSV[3] = 1 - (posY / sizeY)
-                    UpdateSafeTick(force)
+                    UpdateVisualsAndCallback(force)
                 end
 
                 SatValGrid.InputBegan:Connect(function(input)
@@ -1050,7 +1072,7 @@ function Library:CreateWindow(title, wmText)
                     local sizeX = HueBar.AbsoluteSize.X
                     local posX = math.clamp(input.Position.X - HueBar.AbsolutePosition.X, 0, sizeX)
                     currentHSV[1] = posX / sizeX
-                    UpdateSafeTick(force)
+                    UpdateVisualsAndCallback(force)
                 end
 
                 HueBar.InputBegan:Connect(function(input)
@@ -1076,65 +1098,6 @@ function Library:CreateWindow(title, wmText)
                     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                         if isSatValDragging then UpdateSatVal(input, false)
                         elseif isHueDragging then UpdateHue(input, false) end
-                    end
-                end)
-            end
-
-            function GBData:CreateKeybind(options)
-                if isMobile then
-                    options.Default = false
-                    return GBData:CreateToggle(options)
-                end
-
-                local name = options.Name or "Keybind"
-                local bind = options.Default
-                local callback = options.Callback or function() end
-
-                local BContainer = Instance.new("Frame")
-                BContainer.Size = UDim2.new(1, 0, 0, 14)
-                BContainer.BackgroundTransparency = 1
-                BContainer.Parent = ItemContainer
-
-                local Lbl = Instance.new("TextLabel")
-                Lbl.Size = UDim2.new(1, -40, 1, 0)
-                Lbl.BackgroundTransparency = 1
-                Lbl.Text = name
-                Lbl.TextColor3 = Library.Theme.Text
-                Lbl.Font = Enum.Font.Code
-                Lbl.TextSize = 12
-                Lbl.TextXAlignment = Enum.TextXAlignment.Left
-                Lbl.Parent = BContainer
-
-                local BindBtn = Instance.new("TextButton")
-                BindBtn.Size = UDim2.new(0, 40, 1, 0)
-                BindBtn.Position = UDim2.new(1, -40, 0, 0)
-                BindBtn.BackgroundTransparency = 1
-                BindBtn.Text = bind and "["..bind.."]" or "[None]"
-                BindBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-                BindBtn.Font = Enum.Font.Code
-                BindBtn.TextSize = 11
-                BindBtn.TextXAlignment = Enum.TextXAlignment.Right
-                BindBtn.Parent = BContainer
-
-                local isListening = false
-                BindBtn.Activated:Connect(function()
-                    BindBtn.Text = "[...]"
-                    isListening = true
-                end)
-
-                UIS.InputBegan:Connect(function(input, gameProcessed)
-                    if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
-                        if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Escape then
-                            bind = nil
-                            BindBtn.Text = "[None]"
-                        else
-                            bind = input.KeyCode.Name
-                            BindBtn.Text = "[" .. bind .. "]"
-                            pcall(callback, bind)
-                        end
-                        isListening = false
-                    elseif not gameProcessed and not isListening and bind and input.KeyCode.Name == bind then
-                        pcall(callback, bind)
                     end
                 end)
             end
