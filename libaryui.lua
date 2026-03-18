@@ -1,4 +1,6 @@
--- i finished released good use
+-- ==============================================================================
+-- BYMAX UI LIBRARY - V29 (MOBILE FIXES & PERFECT SECTION TITLE ALIGNMENT)
+-- ==============================================================================
 local Library = {
     Flags = {}, 
     Theme = {
@@ -146,6 +148,24 @@ function Library:CreateWindow(title, wmText)
         if NotifGui then NotifGui:Destroy() end
     end
 
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 520, 0, 480)
+    MainFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
+    MainFrame.BackgroundColor3 = Library.Theme.MainBG
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+    Instance.new("UIStroke", MainFrame).Color = Library.Theme.Border
+    
+    -- ========================================================
+    -- MOBILE FIX: Tighter sizing for phone screens
+    -- ========================================================
+    if isMobile then
+        MainFrame.Size = UDim2.new(0, 380, 0, 280)
+        MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140)
+    end
+
     if isMobile then
         local MobileToggleBtn = Instance.new("TextButton")
         MobileToggleBtn.Name = "MobileToggle"
@@ -161,7 +181,11 @@ function Library:CreateWindow(title, wmText)
         MobileToggleBtn.Parent = ScreenGui
         Instance.new("UICorner", MobileToggleBtn).CornerRadius = UDim.new(0, 8)
         Instance.new("UIStroke", MobileToggleBtn).Color = Library.Theme.Border
-        MobileToggleBtn.Activated:Connect(function() ScreenGui.Enabled = not ScreenGui.Enabled end)
+        
+        -- FIX: Toggle MainFrame visibility instead of ScreenGui enabled
+        MobileToggleBtn.Activated:Connect(function() 
+            MainFrame.Visible = not MainFrame.Visible 
+        end)
     end
 
     local WatermarkBG = Instance.new("Frame")
@@ -282,21 +306,6 @@ function Library:CreateWindow(title, wmText)
         activeKeybinds[name].TextColor3 = state and Library.Theme.Accent or Color3.fromRGB(110, 110, 110)
     end
 
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0, 520, 0, 480)
-    MainFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
-    MainFrame.BackgroundColor3 = Library.Theme.MainBG
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Parent = ScreenGui
-    Instance.new("UIStroke", MainFrame).Color = Library.Theme.Border
-    
-    if isMobile then
-        MainFrame.Size = UDim2.new(0, 450, 0, 350)
-        MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
-    end
-
     UIS.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == WindowData.MenuBind then
             MainFrame.Visible = not MainFrame.Visible
@@ -329,7 +338,7 @@ function Library:CreateWindow(title, wmText)
     local TabLayout = Instance.new("UIListLayout")
     TabLayout.FillDirection = Enum.FillDirection.Horizontal
     TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabLayout.Padding = UDim.new(0, 15) -- Slightly spaced out
+    TabLayout.Padding = UDim.new(0, 15)
     TabLayout.Parent = TabBar
 
     local ContentArea = Instance.new("Frame")
@@ -343,9 +352,6 @@ function Library:CreateWindow(title, wmText)
     function WindowData:CreateTab(tabName)
         local TabData = {}
         
-        -- ========================================================
-        -- THE FIX: PREMIUM TAB DESIGN
-        -- ========================================================
         local TabBtn = Instance.new("TextButton")
         TabBtn.Size = UDim2.new(0, 0, 1, 0)
         TabBtn.AutomaticSize = Enum.AutomaticSize.X
@@ -356,7 +362,6 @@ function Library:CreateWindow(title, wmText)
         TabBtn.TextSize = 13
         TabBtn.Parent = TabBar
 
-        -- Active tab accent line indicator
         local TabIndicator = Instance.new("Frame")
         TabIndicator.Size = UDim2.new(1, 0, 0, 2)
         TabIndicator.Position = UDim2.new(0, 0, 1, -2)
@@ -405,7 +410,6 @@ function Library:CreateWindow(title, wmText)
 
         table.insert(self.Tabs, {Btn = TabBtn, Indicator = TabIndicator, Page = Page})
 
-        -- Tab Selection Logic
         TabBtn.MouseButton1Click:Connect(function()
             for _, t in pairs(self.Tabs) do
                 t.Page.Visible = false
@@ -427,53 +431,60 @@ function Library:CreateWindow(title, wmText)
             GroupBox.Parent = (side == "Right") and RightColumn or LeftColumn
             Instance.new("UIStroke", GroupBox).Color = Library.Theme.Border
 
+            -- ========================================================
+            -- TITLE ALIGNMENT FIX: UIListLayout guarantees no overlap
+            -- ========================================================
+            local TopBorder = Instance.new("Frame")
+            TopBorder.Size = UDim2.new(1, 0, 0, 14)
+            TopBorder.Position = UDim2.new(0, 0, 0, -7) -- Centered perfectly on the border line
+            TopBorder.BackgroundTransparency = 1
+            TopBorder.Parent = GroupBox
+
+            local TopLayout = Instance.new("UIListLayout")
+            TopLayout.FillDirection = Enum.FillDirection.Horizontal
+            TopLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            TopLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+            TopLayout.Parent = TopBorder
+
             local GBLineL = Instance.new("Frame")
-            GBLineL.Size = UDim2.new(0, 10, 0, 1) 
+            GBLineL.Size = UDim2.new(0, 10, 0, 1)
             GBLineL.BackgroundColor3 = Library.Theme.Accent
             GBLineL.BorderSizePixel = 0
-            GBLineL.ZIndex = 2
-            GBLineL.Parent = GroupBox
-            
-            -- ========================================================
-            -- TITLE FIX: PERFECT ALIGNMENT (-9 OFFSET)
-            -- ========================================================
-            local TitleCont = Instance.new("Frame")
-            TitleCont.Position = UDim2.new(0, 14, 0, -9) -- MOVED UP BY 2 PIXELS FOR PERFECT CENTER
-            TitleCont.Size = UDim2.new(0, 0, 0, 14) 
-            TitleCont.AutomaticSize = Enum.AutomaticSize.X 
-            TitleCont.BackgroundTransparency = 1
-            TitleCont.ZIndex = 5 
-            TitleCont.Parent = GroupBox
-
-            local cleanName = gbName
-            if #cleanName > 30 then cleanName = cleanName:sub(1,27).."..." end
+            GBLineL.LayoutOrder = 1
+            GBLineL.Parent = TopBorder
 
             local GBTitle = Instance.new("TextLabel")
-            GBTitle.Size = UDim2.new(1, 0, 1, 0)
+            GBTitle.AutomaticSize = Enum.AutomaticSize.X
+            GBTitle.Size = UDim2.new(0, 0, 1, 0)
             GBTitle.BackgroundTransparency = 1
-            GBTitle.Text = cleanName
+            GBTitle.Text = " " .. gbName .. " "
             GBTitle.TextColor3 = Library.Theme.Text
             GBTitle.Font = Enum.Font.Code
             GBTitle.TextSize = 12
-            GBTitle.TextYAlignment = Enum.TextYAlignment.Center 
-            GBTitle.ZIndex = 6
-            GBTitle.Parent = TitleCont
+            GBTitle.LayoutOrder = 2
+            GBTitle.Parent = TopBorder
+
+            -- Restrict title size so it doesn't break the right side
+            local MaxWidth = Instance.new("UISizeConstraint")
+            MaxWidth.MaxSize = Vector2.new(140, 9999) 
+            MaxWidth.Parent = GBTitle
+            GBTitle.TextTruncate = Enum.TextTruncate.AtEnd
 
             local GBLineR = Instance.new("Frame")
             GBLineR.BackgroundColor3 = Library.Theme.Accent
             GBLineR.BorderSizePixel = 0
-            GBLineR.ZIndex = 2
-            GBLineR.Parent = GroupBox
+            GBLineR.LayoutOrder = 3
+            GBLineR.Parent = TopBorder
 
-            local function UpdateTitleLines()
-                local textWidth = TitleCont.AbsoluteSize.X
-                local startR = 14 + textWidth + 4
-                GBLineR.Position = UDim2.new(0, startR, 0, 0)
-                GBLineR.Size = UDim2.new(1, -startR, 0, 1)
+            -- Dynamically size the right line
+            local function UpdateRightLine()
+                local occupiedSpace = 10 + GBTitle.AbsoluteSize.X
+                GBLineR.Size = UDim2.new(1, -occupiedSpace, 0, 1)
             end
-            TitleCont:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateTitleLines)
-            task.spawn(function() RunService.RenderStepped:Wait() UpdateTitleLines() end)
+            GBTitle:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateRightLine)
+            task.spawn(function() RunService.RenderStepped:Wait() UpdateRightLine() end)
 
+            -- ========================================================
             local ItemContainer = Instance.new("Frame")
             ItemContainer.Size = UDim2.new(1, 0, 0, 0)
             ItemContainer.Position = UDim2.new(0, 0, 0, 8) 
