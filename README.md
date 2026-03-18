@@ -5,7 +5,8 @@ roblox ui libary
 
 Bymax UI is a high-performance, lightweight interface library designed specifically for Roblox scripters. This version focuses on eliminating alignment bugs, ensuring mobile compatibility, and preventing executor-level crashes common in other libraries.
 
-![Menu Preview](https://github.com/alper213/Bymax-ui/blob/main/Ekran%20g%C3%B6r%C3%BCnt%C3%BCs%C3%BC%202026-03-17%20231144.png?raw=true)
+![Menu Preview]((https://github.com/alper213/Bymax-ui/blob/main/%C4%B0mages/123123-9.png?raw=true))
+![Menu Preview]((https://github.com/alper213/Bymax-ui/blob/main/%C4%B0mages/34ac183c-307a-4f79-b9cc-55fbce9c46ba.jpg?raw=true))
 
 ## Key Technical Features
 
